@@ -1,0 +1,53 @@
+{
+  "name": "veil-markets",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --configLoader native",
+    "build": "vite build --configLoader native",
+    "lint": "eslint .",
+    "preview": "vite preview --configLoader native",
+    "init:comp-defs": "ts-node scripts/init_comp_defs.ts",
+    "seed:markets": "ts-node scripts/seed_markets.ts",
+    "test:ts": "ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+  },
+  "dependencies": {
+    "@arcium-hq/client": "^0.8.0",
+    "@coral-xyz/anchor": "^0.32.0",
+    "@noble/curves": "^1.4.0",
+    "@solana/wallet-adapter-base": "^0.9.23",
+    "@solana/wallet-adapter-react": "^0.15.35",
+    "@solana/wallet-adapter-react-ui": "^0.9.35",
+    "@solana/wallet-adapter-wallets": "^0.19.23",
+    "@solana/web3.js": "^1.95.8",
+    "buffer": "^6.0.3",
+    "crypto-browserify": "^3.12.0",
+    "node-fetch": "^3.3.2",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "stream-browserify": "^3.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^24.6.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.0",
+    "autoprefixer": "^10.4.27",
+    "chai": "^6.2.0",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.4.0",
+    "mocha": "^11.7.5",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^3.4.19",
+    "ts-mocha": "^11.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.0",
+    "@types/chai": "^5.2.3"
+  }
+}

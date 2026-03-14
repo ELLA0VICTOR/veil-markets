@@ -1,0 +1,12 @@
+[arcium]
+cluster_offset = 456
+rpc_url = "https://api.devnet.solana.com"
+keypair_path = "~/.config/solana/id.json"
+recovery_set_size = 4
+
+[encrypted_ixs]
+path = "encrypted-ixs"
+
+[program]
+name = "veil_markets"
+path = "programs/veil_markets"
