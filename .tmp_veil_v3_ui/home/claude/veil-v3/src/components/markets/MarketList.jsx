@@ -51,7 +51,7 @@ export default function MarketList() {
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "36px 24px 64px" }}>
 
-      {/* â”€â”€ Page header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Page header ─────────────────────────────────────────── */}
       <div className="anim-up" style={{ marginBottom: 32 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div>
@@ -59,7 +59,7 @@ export default function MarketList() {
               Prediction Markets
             </h1>
             <p style={{ fontSize: 12, color: "var(--text-2)" }}>
-              Vote direction encrypted until resolution Â· powered by Arcium MPC
+              Vote direction encrypted until resolution · powered by Arcium MPC
             </p>
           </div>
 
@@ -75,7 +75,7 @@ export default function MarketList() {
             </button>
             <button
               onClick={() => setShowCreate(true)}
-              style={{ ...btnBase, padding: "7px 14px", background: "var(--text)", color: "var(--bg)", border: "none", fontWeight: 700 }}
+              style={{ ...btnBase, padding: "7px 14px", background: "var(--cyan)", color: "#000", border: "none", fontWeight: 700 }}
               onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.88"; }}
               onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
             >
@@ -101,7 +101,7 @@ export default function MarketList() {
         )}
       </div>
 
-      {/* â”€â”€ Tab bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Tab bar ─────────────────────────────────────────────── */}
       <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid var(--border)", paddingBottom: 0 }}>
         {TABS.map((t) => (
           <button
@@ -125,7 +125,7 @@ export default function MarketList() {
         ))}
       </div>
 
-      {/* â”€â”€ Loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Loading ─────────────────────────────────────────────── */}
       {loading && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 12 }}>
           {[...Array(6)].map((_, i) => (
@@ -145,14 +145,14 @@ export default function MarketList() {
         </div>
       )}
 
-      {/* â”€â”€ Error â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Error ───────────────────────────────────────────────── */}
       {error && (
         <div style={{ background: "var(--red-dim)", border: "1px solid var(--red-border)", borderRadius: 10, padding: "12px 16px", color: "var(--red)", fontSize: 12 }}>
           {error}
         </div>
       )}
 
-      {/* â”€â”€ Empty â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Empty ───────────────────────────────────────────────── */}
       {!loading && !error && filtered.length === 0 && (
         <div className="anim-in" style={{ textAlign: "center", padding: "64px 24px" }}>
           <p style={{ fontFamily: "var(--font-sans)", fontSize: 16, color: "var(--text-2)", marginBottom: 8 }}>
@@ -164,14 +164,14 @@ export default function MarketList() {
         </div>
       )}
 
-      {/* â”€â”€ Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Grid ────────────────────────────────────────────────── */}
       {!loading && !error && filtered.length > 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 12 }}>
           {filtered.map((m, i) => <MarketCard key={m.publicKey} market={m} index={i} />)}
         </div>
       )}
 
-      {/* â”€â”€ Create modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Create modal ────────────────────────────────────────── */}
       {showCreate && (
         <Suspense fallback={null}>
           <CreateMarketModal onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); refetch(); }} />

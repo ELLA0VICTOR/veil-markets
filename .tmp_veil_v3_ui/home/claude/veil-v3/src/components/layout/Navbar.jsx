@@ -45,7 +45,6 @@ export default function Navbar() {
             borderRadius: 6,
             display: "flex", alignItems: "center", justifyContent: "center",
             background: "var(--bg-card)",
-            color: "var(--text)",
           }}>
             <ShieldIcon />
           </div>
@@ -62,6 +61,15 @@ export default function Navbar() {
 
         {/* Center nav hint */}
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <div className="pill" style={{
+            background: "var(--green-dim)",
+            border: "1px solid var(--green-border)",
+            color: "var(--green)",
+            fontSize: 9,
+          }}>
+            <span style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--green)", display: "inline-block", animation: "pulse-dot 1.8s infinite" }} />
+            DEVNET
+          </div>
           <div className="pill" style={{
             background: "var(--bg-card)",
             border: "1px solid var(--border)",

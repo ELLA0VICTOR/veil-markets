@@ -13,9 +13,9 @@ import AnimatedReveal from "../ui/AnimatedReveal";
 
 const PHASES = {
   idle:       null,
-  resolving:  "Queuing MPC resolve computationâ€¦",
-  decrypting: "MPC cluster decrypting vote totalsâ€¦",
-  publishing: "Publishing result on-chainâ€¦",
+  resolving:  "Queuing MPC resolve computation…",
+  decrypting: "MPC cluster decrypting vote totals…",
+  publishing: "Publishing result on-chain…",
   done:       "Market settled.",
 };
 
@@ -85,7 +85,7 @@ export default function ResolutionPanel({ market, onResolved }) {
     <>
       <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden", marginTop: 12 }}>
         <div style={{ padding: "12px 18px", borderBottom: "1px solid var(--border)", background: "var(--bg-input)" }}>
-          <p style={{ fontSize: 9, color: "var(--amber)", letterSpacing: "0.12em" }}>MARKET ENDED Â· RESOLUTION AVAILABLE</p>
+          <p style={{ fontSize: 9, color: "var(--amber)", letterSpacing: "0.12em" }}>MARKET ENDED · RESOLUTION AVAILABLE</p>
         </div>
         <div style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
 
@@ -115,12 +115,13 @@ export default function ResolutionPanel({ market, onResolved }) {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
                 {[true, false].map((v) => {
                   const sel = customWins === v;
+                  const col = v ? "var(--cyan)" : "var(--red)";
                   return (
                     <button key={String(v)} onClick={() => setCustom(v)} style={{
-                      background: sel ? "var(--text)" : "var(--bg-input)",
-                      border: `1px solid ${sel ? "var(--text)" : "var(--border)"}`,
+                      background: sel ? (v ? "var(--cyan-dim)" : "var(--red-dim)") : "var(--bg-input)",
+                      border: `1px solid ${sel ? (v ? "var(--cyan-border)" : "var(--red-border)") : "var(--border)"}`,
                       borderRadius: 9, padding: "11px", fontFamily: "var(--font-mono)", fontWeight: 800, fontSize: 18,
-                      letterSpacing: "0.05em", color: sel ? "var(--bg)" : "var(--text-3)", cursor: "pointer", transition: "all 150ms",
+                      letterSpacing: "0.05em", color: sel ? col : "var(--text-3)", cursor: "pointer", transition: "all 150ms",
                     }}>{v ? "YES" : "NO"}</button>
                   );
                 })}
@@ -130,7 +131,7 @@ export default function ResolutionPanel({ market, onResolved }) {
 
           {!market.isPolymarket && !isCreator && (
             <div style={{ background: "var(--bg-input)", borderRadius: 9, padding: "12px 14px" }}>
-              <p style={{ fontSize: 13, color: "var(--text-2)" }}>Custom market â€” creator must resolve this.</p>
+              <p style={{ fontSize: 13, color: "var(--text-2)" }}>Custom market — creator must resolve this.</p>
             </div>
           )}
 
@@ -151,7 +152,7 @@ export default function ResolutionPanel({ market, onResolved }) {
               disabled={isActive}
               style={{ width: "100%", background: isActive ? "var(--bg-input)" : "var(--text)", border: "none", borderRadius: 10, padding: "12px", fontFamily: "var(--font-mono)", fontWeight: 800, fontSize: 13, letterSpacing: "0.07em", color: isActive ? "var(--text-3)" : "var(--bg)", cursor: isActive ? "not-allowed" : "pointer", transition: "all 150ms" }}
             >
-              {isActive ? "RESOLVINGâ€¦" : "REVEAL ENCRYPTED VOTE TOTALS"}
+              {isActive ? "RESOLVING…" : "REVEAL ENCRYPTED VOTE TOTALS"}
             </button>
           )}
         </div>

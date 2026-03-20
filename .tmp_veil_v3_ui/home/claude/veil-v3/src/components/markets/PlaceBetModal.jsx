@@ -20,9 +20,9 @@ function LockIcon() {
 
 const PHASES = {
   idle:       null,
-  encrypting: "Encrypting vote via Arcium MPCÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦",
-  submitting: "Broadcasting to SolanaÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦",
-  mpc:        "MPC nodes computing encrypted stateÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦",
+  encrypting: "Encrypting vote via Arcium MPC…",
+  submitting: "Broadcasting to Solana…",
+  mpc:        "MPC nodes computing encrypted state…",
   done:       "Vote recorded. Distribution hidden until resolution.",
 };
 
@@ -97,18 +97,21 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
         <p style={{ fontSize: 9, color: "var(--text-3)", letterSpacing: "0.12em", marginBottom: 8 }}>YOUR PREDICTION</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 18 }}>
           {[true, false].map((v) => {
-            const sel = isYes === v;
+            const sel   = isYes === v;
+            const color = v ? "var(--cyan)" : "var(--red)";
+            const dim   = v ? "var(--cyan-dim)" : "var(--red-dim)";
+            const bdr   = v ? "var(--cyan-border)" : "var(--red-border)";
             return (
               <button key={String(v)} onClick={() => setIsYes(v)} style={{
-                background: sel ? "var(--text)" : "var(--bg-input)",
-                border: `1px solid ${sel ? "var(--text)" : "var(--border)"}`,
+                background: sel ? dim : "var(--bg-input)",
+                border: `1px solid ${sel ? bdr : "var(--border)"}`,
                 borderRadius: 9,
                 padding: "16px",
                 fontFamily: "var(--font-mono)",
                 fontWeight: 800,
                 fontSize: 20,
                 letterSpacing: "0.05em",
-                color: sel ? "var(--bg)" : "var(--text-3)",
+                color: sel ? color : "var(--text-3)",
                 cursor: "pointer",
                 transition: "all 150ms ease",
               }}>{v ? "YES" : "NO"}</button>
@@ -119,7 +122,7 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
         {/* Amount */}
         <p style={{ fontSize: 9, color: "var(--text-3)", letterSpacing: "0.12em", marginBottom: 8 }}>AMOUNT</p>
 
-        {/* Quick % buttons ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Swifter style */}
+        {/* Quick % buttons — Swifter style */}
         <div style={{ display: "flex", gap: 5, marginBottom: 8 }}>
           {[[25,"25%"],[50,"50%"],[75,"75%"],[100,"Max"]].map(([pct, label]) => (
             <button
@@ -189,7 +192,7 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
           disabled={active || done}
           style={{
             width: "100%",
-            background: active || done ? "var(--bg-input)" : "var(--text)",
+            background: active || done ? "var(--bg-input)" : isYes ? "var(--cyan)" : "var(--red)",
             border: "none",
             borderRadius: 10,
             padding: "13px",
@@ -197,12 +200,12 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
             fontWeight: 800,
             fontSize: 13,
             letterSpacing: "0.07em",
-            color: active || done ? "var(--text-3)" : "var(--bg)",
+            color: active || done ? "var(--text-3)" : "#000",
             cursor: active || done ? "not-allowed" : "pointer",
             transition: "all 150ms ease",
           }}
         >
-          {active ? "PROCESSINGÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦" : done ? "VOTE RECORDED" : `BET ${isYes ? "YES" : "NO"} Ãƒâ€šÃ‚Â· ${amount} SOL`}
+          {active ? "PROCESSING…" : done ? "VOTE RECORDED" : `BET ${isYes ? "YES" : "NO"} · ${amount} SOL`}
         </button>
       </div>
     </div>
