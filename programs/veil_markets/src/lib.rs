@@ -1,11 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
-use arcium_anchor::*;
-use arcium_client::*;
-use arcium_client::idl::arcium::types::{CircuitSource, OffChainCircuitSource};
+use arcium_anchor::prelude::*;
+use arcium_client::idl::arcium::types::{CallbackAccount, CircuitSource, OffChainCircuitSource};
 use arcium_macros::*;
 
-declare_id!("VEiLmArKEtS111111111111111111111111111111111");
+declare_id!("bJ9U7u1ucVuiRPmusoaKiHj7jNyKy9FLQ57tTjE62e7");
 
 const COMP_DEF_OFFSET_INIT_MARKET_STATE: u32 = comp_def_offset("init_market_state");
 const COMP_DEF_OFFSET_ADD_VOTE: u32 = comp_def_offset("add_vote");
@@ -138,16 +137,15 @@ pub mod veil_markets {
         system_program::transfer(cpi_context, MIN_INITIAL_POOL_LAMPORTS)?;
 
         // Queue init_market_state MPC computation (no inputs needed)
-        let callback_ix = callback_ix(
-            ctx.accounts.create_market_callback_program.key(),
-            &[ctx.accounts.market.key()],
-        );
+        let callback_ix = <InitMarketStateCallback as CallbackCompAccs>::callback_ix(computation_offset, &ctx.accounts.mxe_account, &[CallbackAccount { pubkey: ctx.accounts.market.key(), is_writable: true }])?;
 
+        ctx.accounts.sign_pda_account.bump = ctx.bumps.sign_pda_account;
         queue_computation(
             ctx.accounts,
             computation_offset,
             ArgBuilder::new().build(),
             vec![callback_ix],
+            1,
             CLUSTER_OFFSET,
         )?;
 
@@ -159,8 +157,8 @@ pub mod veil_markets {
     // ----------------------------------------------------------------
 
     #[arcium_callback(encrypted_ix = "init_market_state")]
-    pub fn create_market_callback(
-        ctx: Context<CreateMarketCallback>,
+    pub fn init_market_state_callback(
+        ctx: Context<InitMarketStateCallback>,
         output: SignedComputationOutputs<InitMarketStateOutput>,
     ) -> Result<()> {
         match output.verify_output(
@@ -231,11 +229,9 @@ pub mod veil_markets {
         let state_ct_no = market.state_ct_no;
 
         // Queue add_vote MPC computation
-        let callback_ix = callback_ix(
-            ctx.accounts.add_vote_callback_program.key(),
-            &[ctx.accounts.market.key()],
-        );
+        let callback_ix = <AddVoteCallback as CallbackCompAccs>::callback_ix(computation_offset, &ctx.accounts.mxe_account, &[CallbackAccount { pubkey: ctx.accounts.market.key(), is_writable: true }])?;
 
+        ctx.accounts.sign_pda_account.bump = ctx.bumps.sign_pda_account;
         queue_computation(
             ctx.accounts,
             computation_offset,
@@ -251,6 +247,7 @@ pub mod veil_markets {
                 .encrypted_u64(state_ct_no)
                 .build(),
             vec![callback_ix],
+            1,
             CLUSTER_OFFSET,
         )?;
 
@@ -304,11 +301,9 @@ pub mod veil_markets {
         let state_ct_yes = market.state_ct_yes;
         let state_ct_no = market.state_ct_no;
 
-        let callback_ix = callback_ix(
-            ctx.accounts.resolve_market_callback_program.key(),
-            &[ctx.accounts.market.key()],
-        );
+        let callback_ix = <ResolveMarketCallback as CallbackCompAccs>::callback_ix(computation_offset, &ctx.accounts.mxe_account, &[CallbackAccount { pubkey: ctx.accounts.market.key(), is_writable: true }])?;
 
+        ctx.accounts.sign_pda_account.bump = ctx.bumps.sign_pda_account;
         queue_computation(
             ctx.accounts,
             computation_offset,
@@ -321,6 +316,7 @@ pub mod veil_markets {
                 .x25519_pubkey(resolver_pub_key)
                 .build(),
             vec![callback_ix],
+            1,
             CLUSTER_OFFSET,
         )?;
 
@@ -494,13 +490,17 @@ pub struct Position {
 pub struct InitInitMarketStateCompDef<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
+    #[account(mut)]
     pub mxe_account: Account<'info, MXEAccount>,
     #[account(mut)]
-    pub comp_def_account: Account<'info, ComputationDefinitionAccount>,
+    /// CHECK: Computation definition PDA is created and validated by the Arcium program during init.
+    pub comp_def_account: UncheckedAccount<'info>,
     #[account(mut)]
+    /// CHECK: Lookup table account is derived and validated by the LUT program / Arcium CPI flow.
     pub address_lookup_table: UncheckedAccount<'info>,
-    pub lut_program: Program<'info, AddressLookupTableProgram>,
-    pub arcium_program: Program<'info, ArciumProgram>,
+    /// CHECK: This is the lookup table program account passed through to Arcium validation.
+    pub lut_program: UncheckedAccount<'info>,
+    pub arcium_program: Program<'info, Arcium>,
     pub system_program: Program<'info, System>,
 }
 
@@ -509,13 +509,17 @@ pub struct InitInitMarketStateCompDef<'info> {
 pub struct InitAddVoteCompDef<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
+    #[account(mut)]
     pub mxe_account: Account<'info, MXEAccount>,
     #[account(mut)]
-    pub comp_def_account: Account<'info, ComputationDefinitionAccount>,
+    /// CHECK: Computation definition PDA is created and validated by the Arcium program during init.
+    pub comp_def_account: UncheckedAccount<'info>,
     #[account(mut)]
+    /// CHECK: Lookup table account is derived and validated by the LUT program / Arcium CPI flow.
     pub address_lookup_table: UncheckedAccount<'info>,
-    pub lut_program: Program<'info, AddressLookupTableProgram>,
-    pub arcium_program: Program<'info, ArciumProgram>,
+    /// CHECK: This is the lookup table program account passed through to Arcium validation.
+    pub lut_program: UncheckedAccount<'info>,
+    pub arcium_program: Program<'info, Arcium>,
     pub system_program: Program<'info, System>,
 }
 
@@ -524,17 +528,21 @@ pub struct InitAddVoteCompDef<'info> {
 pub struct InitResolveMarketCompDef<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
+    #[account(mut)]
     pub mxe_account: Account<'info, MXEAccount>,
     #[account(mut)]
-    pub comp_def_account: Account<'info, ComputationDefinitionAccount>,
+    /// CHECK: Computation definition PDA is created and validated by the Arcium program during init.
+    pub comp_def_account: UncheckedAccount<'info>,
     #[account(mut)]
+    /// CHECK: Lookup table account is derived and validated by the LUT program / Arcium CPI flow.
     pub address_lookup_table: UncheckedAccount<'info>,
-    pub lut_program: Program<'info, AddressLookupTableProgram>,
-    pub arcium_program: Program<'info, ArciumProgram>,
+    /// CHECK: This is the lookup table program account passed through to Arcium validation.
+    pub lut_program: UncheckedAccount<'info>,
+    pub arcium_program: Program<'info, Arcium>,
     pub system_program: Program<'info, System>,
 }
 
-#[queue_computation_accounts("init_market_state", payer)]
+#[queue_computation_accounts("init_market_state", creator)]
 #[derive(Accounts)]
 #[instruction(computation_offset: u64)]
 pub struct CreateMarket<'info> {
@@ -556,47 +564,59 @@ pub struct CreateMarket<'info> {
     )]
     pub vault: UncheckedAccount<'info>,
     pub mxe_account: Account<'info, MXEAccount>,
+    #[account(
+        init_if_needed,
+        payer = creator,
+        space = 8 + 1,
+        seeds = [SIGN_PDA_SEED],
+        bump,
+    )]
+    pub sign_pda_account: Account<'info, ArciumSignerAccount>,
     #[account(mut)]
-    pub mempool_account: Account<'info, MempoolAccount>,
+    /// CHECK: Mempool PDA is owned and validated by the Arcium program.
+    pub mempool_account: UncheckedAccount<'info>,
     #[account(mut)]
-    pub executing_pool: Account<'info, ExecutingPoolAccount>,
-    #[account(mut)]
+    /// CHECK: Executing pool PDA is owned and validated by the Arcium program.
+    pub executing_pool: UncheckedAccount<'info>,
     pub comp_def_account: Account<'info, ComputationDefinitionAccount>,
     #[account(mut)]
-    pub computation_account: Account<'info, ComputationAccount>,
-    pub cluster_account: Account<'info, ClusterAccount>,
-    /// CHECK: callback program for init_market_state
-    pub create_market_callback_program: UncheckedAccount<'info>,
-    pub arcium_program: Program<'info, ArciumProgram>,
+    /// CHECK: Computation PDA is derived and validated by the Arcium program for this offset.
+    pub computation_account: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub cluster_account: Account<'info, Cluster>,
+    #[account(mut, address = ARCIUM_FEE_POOL_ACCOUNT_ADDRESS)]
+    pub pool_account: Account<'info, FeePool>,
+    #[account(mut, address = ARCIUM_CLOCK_ACCOUNT_ADDRESS)]
+    pub clock_account: Account<'info, ClockAccount>,
+    pub arcium_program: Program<'info, Arcium>,
     pub system_program: Program<'info, System>,
 }
 
 #[callback_accounts("init_market_state")]
 #[derive(Accounts)]
-pub struct CreateMarketCallback<'info> {
-    pub arcium_program: Program<'info, ArciumProgram>,
+pub struct InitMarketStateCallback<'info> {
+    pub arcium_program: Program<'info, Arcium>,
     pub comp_def_account: Account<'info, ComputationDefinitionAccount>,
     pub mxe_account: Account<'info, MXEAccount>,
-    pub computation_account: Account<'info, ComputationAccount>,
-    pub cluster_account: Account<'info, ClusterAccount>,
+    /// CHECK: Computation PDA is verified by Arcium callback validation before output decoding.
+    pub computation_account: UncheckedAccount<'info>,
+    pub cluster_account: Account<'info, Cluster>,
     /// CHECK: instructions sysvar
+    /// CHECK: Instructions sysvar is validated by the callback macro helper before use.
     pub instructions_sysvar: UncheckedAccount<'info>,
     #[account(mut)]
     pub market: Account<'info, Market>,
 }
 
-#[queue_computation_accounts("add_vote", payer)]
+#[queue_computation_accounts("add_vote", voter)]
 #[derive(Accounts)]
 #[instruction(computation_offset: u64)]
 pub struct PlaceVote<'info> {
     #[account(mut)]
     pub voter: Signer<'info>,
-    // Market is looked up by pubkey supplied by the client.
-    // Seeds re-derivation is impossible here because computation_offset
-    // is not stored on-chain; the client passes the correct PDA directly.
     #[account(mut)]
     pub market: Account<'info, Market>,
-    /// CHECK: vault PDA — seeds verified in instruction logic via vault_bump
+    /// CHECK: vault PDA verified by seeds
     #[account(
         mut,
         seeds = [b"vault", market.key().as_ref()],
@@ -612,69 +632,98 @@ pub struct PlaceVote<'info> {
     )]
     pub position: Account<'info, Position>,
     pub mxe_account: Account<'info, MXEAccount>,
+    #[account(
+        init_if_needed,
+        payer = voter,
+        space = 8 + 1,
+        seeds = [SIGN_PDA_SEED],
+        bump,
+    )]
+    pub sign_pda_account: Account<'info, ArciumSignerAccount>,
     #[account(mut)]
-    pub mempool_account: Account<'info, MempoolAccount>,
+    /// CHECK: Mempool PDA is owned and validated by the Arcium program.
+    pub mempool_account: UncheckedAccount<'info>,
     #[account(mut)]
-    pub executing_pool: Account<'info, ExecutingPoolAccount>,
-    #[account(mut)]
+    /// CHECK: Executing pool PDA is owned and validated by the Arcium program.
+    pub executing_pool: UncheckedAccount<'info>,
     pub comp_def_account: Account<'info, ComputationDefinitionAccount>,
     #[account(mut)]
-    pub computation_account: Account<'info, ComputationAccount>,
-    pub cluster_account: Account<'info, ClusterAccount>,
-    /// CHECK: callback program for add_vote
-    pub add_vote_callback_program: UncheckedAccount<'info>,
-    pub arcium_program: Program<'info, ArciumProgram>,
+    /// CHECK: Computation PDA is derived and validated by the Arcium program for this offset.
+    pub computation_account: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub cluster_account: Account<'info, Cluster>,
+    #[account(mut, address = ARCIUM_FEE_POOL_ACCOUNT_ADDRESS)]
+    pub pool_account: Account<'info, FeePool>,
+    #[account(mut, address = ARCIUM_CLOCK_ACCOUNT_ADDRESS)]
+    pub clock_account: Account<'info, ClockAccount>,
+    pub arcium_program: Program<'info, Arcium>,
     pub system_program: Program<'info, System>,
 }
 
 #[callback_accounts("add_vote")]
 #[derive(Accounts)]
 pub struct AddVoteCallback<'info> {
-    pub arcium_program: Program<'info, ArciumProgram>,
+    pub arcium_program: Program<'info, Arcium>,
     pub comp_def_account: Account<'info, ComputationDefinitionAccount>,
     pub mxe_account: Account<'info, MXEAccount>,
-    pub computation_account: Account<'info, ComputationAccount>,
-    pub cluster_account: Account<'info, ClusterAccount>,
+    /// CHECK: Computation PDA is verified by Arcium callback validation before output decoding.
+    pub computation_account: UncheckedAccount<'info>,
+    pub cluster_account: Account<'info, Cluster>,
     /// CHECK: instructions sysvar
+    /// CHECK: Instructions sysvar is validated by the callback macro helper before use.
     pub instructions_sysvar: UncheckedAccount<'info>,
     #[account(mut)]
     pub market: Account<'info, Market>,
 }
 
-#[queue_computation_accounts("resolve_market", payer)]
+#[queue_computation_accounts("resolve_market", resolver)]
 #[derive(Accounts)]
 #[instruction(computation_offset: u64)]
 pub struct ResolveMarket<'info> {
     #[account(mut)]
     pub resolver: Signer<'info>,
-    // Market is looked up by pubkey; no seeds re-derivation needed.
     #[account(mut)]
     pub market: Account<'info, Market>,
     pub mxe_account: Account<'info, MXEAccount>,
+    #[account(
+        init_if_needed,
+        payer = resolver,
+        space = 8 + 1,
+        seeds = [SIGN_PDA_SEED],
+        bump,
+    )]
+    pub sign_pda_account: Account<'info, ArciumSignerAccount>,
     #[account(mut)]
-    pub mempool_account: Account<'info, MempoolAccount>,
+    /// CHECK: Mempool PDA is owned and validated by the Arcium program.
+    pub mempool_account: UncheckedAccount<'info>,
     #[account(mut)]
-    pub executing_pool: Account<'info, ExecutingPoolAccount>,
-    #[account(mut)]
+    /// CHECK: Executing pool PDA is owned and validated by the Arcium program.
+    pub executing_pool: UncheckedAccount<'info>,
     pub comp_def_account: Account<'info, ComputationDefinitionAccount>,
     #[account(mut)]
-    pub computation_account: Account<'info, ComputationAccount>,
-    pub cluster_account: Account<'info, ClusterAccount>,
-    /// CHECK: callback program for resolve_market
-    pub resolve_market_callback_program: UncheckedAccount<'info>,
-    pub arcium_program: Program<'info, ArciumProgram>,
+    /// CHECK: Computation PDA is derived and validated by the Arcium program for this offset.
+    pub computation_account: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub cluster_account: Account<'info, Cluster>,
+    #[account(mut, address = ARCIUM_FEE_POOL_ACCOUNT_ADDRESS)]
+    pub pool_account: Account<'info, FeePool>,
+    #[account(mut, address = ARCIUM_CLOCK_ACCOUNT_ADDRESS)]
+    pub clock_account: Account<'info, ClockAccount>,
+    pub arcium_program: Program<'info, Arcium>,
     pub system_program: Program<'info, System>,
 }
 
 #[callback_accounts("resolve_market")]
 #[derive(Accounts)]
 pub struct ResolveMarketCallback<'info> {
-    pub arcium_program: Program<'info, ArciumProgram>,
+    pub arcium_program: Program<'info, Arcium>,
     pub comp_def_account: Account<'info, ComputationDefinitionAccount>,
     pub mxe_account: Account<'info, MXEAccount>,
-    pub computation_account: Account<'info, ComputationAccount>,
-    pub cluster_account: Account<'info, ClusterAccount>,
+    /// CHECK: Computation PDA is verified by Arcium callback validation before output decoding.
+    pub computation_account: UncheckedAccount<'info>,
+    pub cluster_account: Account<'info, Cluster>,
     /// CHECK: instructions sysvar
+    /// CHECK: Instructions sysvar is validated by the callback macro helper before use.
     pub instructions_sysvar: UncheckedAccount<'info>,
     #[account(mut)]
     pub market: Account<'info, Market>,
@@ -716,6 +765,12 @@ pub struct ClaimWinnings<'info> {
 // ----------------------------------------------------------------
 
 #[error_code]
+pub enum ErrorCode {
+    #[msg("Cluster not set in MXE account")]
+    ClusterNotSet,
+}
+
+#[error_code]
 pub enum VeilError {
     #[msg("Computation was aborted by the MPC cluster")]
     AbortedComputation,
@@ -738,3 +793,5 @@ pub enum VeilError {
     #[msg("Invalid end time — must be in the future")]
     InvalidEndTime,
 }
+
+

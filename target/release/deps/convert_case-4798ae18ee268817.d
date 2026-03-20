@@ -1,0 +1,11 @@
+/mnt/c/Users/hp/Desktop/veil-markets/target/release/deps/libconvert_case-4798ae18ee268817.rmeta: /home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/lib.rs /home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/boundary.rs /home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/case.rs /home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/converter.rs /home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/pattern.rs
+
+/mnt/c/Users/hp/Desktop/veil-markets/target/release/deps/libconvert_case-4798ae18ee268817.rlib: /home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/lib.rs /home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/boundary.rs /home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/case.rs /home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/converter.rs /home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/pattern.rs
+
+/mnt/c/Users/hp/Desktop/veil-markets/target/release/deps/convert_case-4798ae18ee268817.d: /home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/lib.rs /home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/boundary.rs /home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/case.rs /home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/converter.rs /home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/pattern.rs
+
+/home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/lib.rs:
+/home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/boundary.rs:
+/home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/case.rs:
+/home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/converter.rs:
+/home/victor/.cargo/registry/src/index.crates.io-6f17d22bba15001f/convert_case-0.8.0/src/pattern.rs:
