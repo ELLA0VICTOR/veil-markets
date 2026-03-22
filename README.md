@@ -72,10 +72,10 @@ veil-markets/
 
 ## Versions
 
-This repo is aligned around the Arcium 0.8.x line.
+This repo is aligned around the Arcium 0.9.2 line.
 
-- Arcium CLI: `0.8.5` recommended
-- `@arcium-hq/client`: `0.8.x`
+- Arcium CLI: `0.9.2`
+- `@arcium-hq/client`: `0.9.2`
 - Anchor: `0.32.x`
 - Solana CLI: `2.3.0`
 - Cluster offset: `456`
@@ -100,16 +100,24 @@ You will also need:
 - Docker running for `arcium build`
 - a reliable devnet RPC for deployment work
 
-## Frontend Environment
+## App Environment
 
-The frontend reads these values from Vite env variables.
+The frontend and Polymarket proxy read these values from environment variables.
 
 ```bash
 VITE_PROGRAM_ID=<your deployed program id>
 VITE_RPC_ENDPOINT=https://api.devnet.solana.com
+VITE_POLYMARKET_API_BASE=/api/polymarket
+PORT=8787
+POLYMARKET_UPSTREAM=https://gamma-api.polymarket.com
+POLYMARKET_ALLOW_ORIGIN=https://your-frontend-domain.com
 ```
 
-If you do not set them, the app falls back to the placeholder values in `src/utils/constants.js`.
+For local development, `VITE_POLYMARKET_API_BASE` can stay as `/api/polymarket` and Vite will proxy to the local backend.
+
+For production, deploy the frontend behind the Node proxy or point `VITE_POLYMARKET_API_BASE` at your deployed proxy origin.
+
+If you do not set `VITE_PROGRAM_ID` and `VITE_RPC_ENDPOINT`, the app falls back to the values in `src/utils/constants.js`.
 
 ## Offchain Circuit Hosting
 
@@ -190,11 +198,37 @@ npx ts-node scripts/init_comp_defs.ts
 npx ts-node scripts/seed_markets.ts
 ```
 
-### 6. Run frontend
+### 6. Run proxy + frontend
 
 ```bash
+npm run server
 npm run dev
 ```
+
+The browser never calls Polymarket directly. It goes through the local/backend proxy first, which avoids CORS failures and gives you a production-ready place for caching, rate limiting, and upstream failover.
+
+## Production Polymarket Proxy
+
+Polymarket does not reliably support direct browser access for this app shape. This repo includes a production backend proxy in `server/index.js`.
+
+It exposes:
+
+- `GET /health`
+- `GET /api/polymarket/markets`
+- `GET /api/polymarket/markets/:id`
+
+Recommended production deployment:
+
+1. deploy `server/index.js` as a small Node service
+2. serve it under the same origin as the frontend, or set `VITE_POLYMARKET_API_BASE` to the proxy URL
+3. restrict `POLYMARKET_ALLOW_ORIGIN` to your real frontend domain
+4. add your own edge caching or CDN in front of the proxy if traffic grows
+
+This is the supported path for:
+
+- automatic Polymarket feed display on the homepage
+- import-from-Polymarket inside the create modal
+- live Polymarket resolution lookups
 
 ## Test Flow
 

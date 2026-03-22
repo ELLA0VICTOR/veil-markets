@@ -39,15 +39,20 @@ function Label({ ch, max, children }) {
   );
 }
 
-export default function CreateMarketModal({ onClose, onCreated }) {
+export default function CreateMarketModal({
+  onClose,
+  onCreated,
+  initialTab = "custom",
+  initialSelectedPM = null,
+}) {
   const { connection } = useConnection();
   const wallet = useAnchorWallet();
   const { publicKey } = useWallet();
-  const [tab, setTab] = useState("custom");
+  const [tab, setTab] = useState(initialTab);
   const [question, setQuestion] = useState("");
   const [endDate, setEndDate]   = useState("");
   const [sol, setSol]           = useState(String(MIN_INITIAL_POOL_SOL));
-  const [selectedPM, setSelectedPM] = useState(null);
+  const [selectedPM, setSelectedPM] = useState(initialSelectedPM);
   const [sub,    setSub]    = useState(false);
   const [status, setStatus] = useState("");
   const [err,    setErr]    = useState("");
@@ -79,7 +84,7 @@ export default function CreateMarketModal({ onClose, onCreated }) {
       setStatus("MPC initializing…");
       await waitForArciumComputation(provider, cOff, "confirmed");
       setStatus("Market is live!");
-      setTimeout(() => onCreated(), 800);
+      setTimeout(() => onCreated({ source: isPoly ? "polymarket" : "custom", question: q }), 800);
     } catch (e) { setErr(e.message || "Failed"); }
     finally { setSub(false); }
   };

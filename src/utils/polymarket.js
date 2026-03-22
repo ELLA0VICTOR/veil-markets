@@ -1,4 +1,5 @@
-const GAMMA_API = "https://gamma-api.polymarket.com";
+const GAMMA_API =
+  import.meta.env.VITE_POLYMARKET_API_BASE || "/api/polymarket";
 
 // Fetch active binary YES/NO markets from Polymarket
 export async function fetchPolymarketMarkets(limit = 20, offset = 0) {
@@ -25,10 +26,14 @@ export async function fetchPolymarketMarkets(limit = 20, offset = 0) {
 
 // Fetch a single market by conditionId
 export async function fetchPolymarketMarket(conditionId) {
-  const res = await fetch(`${GAMMA_API}/markets/${conditionId}`);
+  const res = await fetch(
+    `${GAMMA_API}/markets?condition_ids=${encodeURIComponent(conditionId)}`
+  );
   if (!res.ok) throw new Error(`Market not found: ${conditionId}`);
   const data = await res.json();
-  return normalizePolymarket(data);
+  const market = Array.isArray(data) ? data[0] : data;
+  if (!market) throw new Error(`Market not found: ${conditionId}`);
+  return normalizePolymarket(market);
 }
 
 // Check resolution status of a Polymarket market

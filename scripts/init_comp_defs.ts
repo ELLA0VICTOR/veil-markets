@@ -11,14 +11,20 @@ import {
   CLUSTER_OFFSET,
   CircuitName,
   getInitCompDefAccounts,
-} from "./arcium_helpers";
+} from "./arcium_helpers.js";
 
 async function initCompDef(
+  provider: anchor.AnchorProvider,
   program: Program<any>,
   payer: anchor.web3.PublicKey,
   circuitName: CircuitName
 ) {
-  const accounts = getInitCompDefAccounts(program.programId, payer, circuitName);
+  const accounts = await getInitCompDefAccounts(
+    provider,
+    program.programId,
+    payer,
+    circuitName
+  );
 
   console.log(`Initializing comp def for: ${circuitName}`);
   console.log(`  MXE account:     ${accounts.mxeAccount.toBase58()}`);
@@ -65,9 +71,9 @@ async function main() {
   console.log(`Program: ${program.programId.toBase58()}`);
   console.log(`Cluster offset: ${CLUSTER_OFFSET}\n`);
 
-  await initCompDef(program, payer, "init_market_state");
-  await initCompDef(program, payer, "add_vote");
-  await initCompDef(program, payer, "resolve_market");
+  await initCompDef(provider, program, payer, "init_market_state");
+  await initCompDef(provider, program, payer, "add_vote");
+  await initCompDef(provider, program, payer, "resolve_market");
 
   console.log("=== All computation definitions initialized. ===");
   console.log("You can now create markets and place bets.");

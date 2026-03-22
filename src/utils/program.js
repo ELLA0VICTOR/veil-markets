@@ -23,6 +23,7 @@ export function createVeilProgram(provider) {
   return new Program(
     {
       ...idl,
+      address: PROGRAM_ID,
       metadata: {
         ...(idl.metadata ?? {}),
         address: PROGRAM_ID,

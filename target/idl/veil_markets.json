@@ -1016,8 +1016,53 @@
   "errors": [
     {
       "code": 6000,
-      "name": "ClusterNotSet",
-      "msg": "Cluster not set in MXE account"
+      "name": "AbortedComputation",
+      "msg": "Computation was aborted by the MPC cluster"
+    },
+    {
+      "code": 6001,
+      "name": "MarketNotOpen",
+      "msg": "Market is not open for betting"
+    },
+    {
+      "code": 6002,
+      "name": "MarketNotResolvable",
+      "msg": "Market is not ready for resolution"
+    },
+    {
+      "code": 6003,
+      "name": "MarketNotSettled",
+      "msg": "Market has not been settled yet"
+    },
+    {
+      "code": 6004,
+      "name": "AlreadyClaimed",
+      "msg": "Position has already been claimed"
+    },
+    {
+      "code": 6005,
+      "name": "NotAWinner",
+      "msg": "This position is on the losing side"
+    },
+    {
+      "code": 6006,
+      "name": "BelowMinimumStake",
+      "msg": "Stake amount is below the minimum"
+    },
+    {
+      "code": 6007,
+      "name": "MarketStillActive",
+      "msg": "Market is still active — end time has not passed"
+    },
+    {
+      "code": 6008,
+      "name": "Unauthorized",
+      "msg": "You are not authorized to perform this action"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidEndTime",
+      "msg": "Invalid end time — must be in the future"
     }
   ],
   "types": [

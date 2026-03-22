@@ -1,5 +1,16 @@
-import { RescueCipher } from "@arcium-hq/client";
 import { x25519 } from "@noble/curves/ed25519";
+
+let rescueCipherModulePromise = null;
+
+async function getRescueCipher() {
+  if (!rescueCipherModulePromise) {
+    rescueCipherModulePromise = import("@arcium-hq/client").then(
+      (module) => module.RescueCipher
+    );
+  }
+
+  return rescueCipherModulePromise;
+}
 
 // Convert 16 random bytes to u128 (little-endian)
 function bytesToU128(bytes) {
@@ -27,6 +38,7 @@ function u128ToBytes(value) {
  * @returns {{ ciphertexts, nonce, nonceBytes, publicKey, privateKey, sharedSecret }}
  */
 export async function encryptVote(is_yes, stakeLamports, mxePublicKey) {
+  const RescueCipher = await getRescueCipher();
   const privateKey = x25519.utils.randomPrivateKey();
   const publicKey = x25519.getPublicKey(privateKey);
   const sharedSecret = x25519.getSharedSecret(privateKey, mxePublicKey);
@@ -59,12 +71,13 @@ export async function encryptVote(is_yes, stakeLamports, mxePublicKey) {
  * @param {(number[][]|Uint8Array[])} ciphertexts - [[u8;32], [u8;32], [u8;32]] ciphertexts
  * @returns {{ totalYes: bigint, totalNo: bigint, yesWins: boolean }}
  */
-export function decryptMarketResult(
+export async function decryptMarketResult(
   resolverPrivateKey,
   encryptionKey,
   nonce,
   ciphertexts
 ) {
+  const RescueCipher = await getRescueCipher();
   const sharedSecret = x25519.getSharedSecret(
     resolverPrivateKey,
     new Uint8Array(encryptionKey)

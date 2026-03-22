@@ -1022,8 +1022,53 @@ export type VeilMarkets = {
   "errors": [
     {
       "code": 6000,
-      "name": "clusterNotSet",
-      "msg": "Cluster not set in MXE account"
+      "name": "abortedComputation",
+      "msg": "Computation was aborted by the MPC cluster"
+    },
+    {
+      "code": 6001,
+      "name": "marketNotOpen",
+      "msg": "Market is not open for betting"
+    },
+    {
+      "code": 6002,
+      "name": "marketNotResolvable",
+      "msg": "Market is not ready for resolution"
+    },
+    {
+      "code": 6003,
+      "name": "marketNotSettled",
+      "msg": "Market has not been settled yet"
+    },
+    {
+      "code": 6004,
+      "name": "alreadyClaimed",
+      "msg": "Position has already been claimed"
+    },
+    {
+      "code": 6005,
+      "name": "notAWinner",
+      "msg": "This position is on the losing side"
+    },
+    {
+      "code": 6006,
+      "name": "belowMinimumStake",
+      "msg": "Stake amount is below the minimum"
+    },
+    {
+      "code": 6007,
+      "name": "marketStillActive",
+      "msg": "Market is still active — end time has not passed"
+    },
+    {
+      "code": 6008,
+      "name": "unauthorized",
+      "msg": "You are not authorized to perform this action"
+    },
+    {
+      "code": 6009,
+      "name": "invalidEndTime",
+      "msg": "Invalid end time — must be in the future"
     }
   ],
   "types": [

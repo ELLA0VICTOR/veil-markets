@@ -63,7 +63,16 @@ export default function ResolutionPanel({ market, onResolved }) {
       setPhase("decrypting");
       await waitForArciumComputation(provider, cOff, "confirmed");
       const upd = await program.account.market.fetch(mPK);
-      const dec = decryptMarketResult(privKey, Array.from(upd.resultEncryptionKey), BigInt(upd.resultNonce.toString()), [Array.from(upd.resultCtTotalYes), Array.from(upd.resultCtTotalNo), Array.from(upd.resultCtYesWins)]);
+      const dec = await decryptMarketResult(
+        privKey,
+        Array.from(upd.resultEncryptionKey),
+        BigInt(upd.resultNonce.toString()),
+        [
+          Array.from(upd.resultCtTotalYes),
+          Array.from(upd.resultCtTotalNo),
+          Array.from(upd.resultCtYesWins),
+        ]
+      );
       const yesWins = override !== null ? override : dec.yesWins;
       setRevealData({ totalYes: dec.totalYes, totalNo: dec.totalNo, yesWins });
       setPhase("publishing");

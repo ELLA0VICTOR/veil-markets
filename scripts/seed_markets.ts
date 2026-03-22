@@ -6,7 +6,7 @@ import {
   ARCIUM_PROGRAM_ID,
   getComputationAccounts,
   waitForComputation,
-} from "./arcium_helpers";
+} from "./arcium_helpers.js";
 
 const GAMMA_API = "https://gamma-api.polymarket.com";
 

@@ -1,4 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
+import anchorPkg from "@coral-xyz/anchor";
+const { BN } = anchorPkg;
 import {
   AddressLookupTableProgram,
   PublicKey,
@@ -6,6 +8,7 @@ import {
 } from "@solana/web3.js";
 import {
   awaitComputationFinalization,
+  getArciumProgram,
   getClusterAccAddress,
   getCompDefAccAddress,
   getCompDefAccOffset,
@@ -19,7 +22,7 @@ import {
 
 export const CLUSTER_OFFSET = 456;
 export const ARCIUM_PROGRAM_ID = new PublicKey(
-  "ARCiUMFnVrDqNZJqiWJAGgqaKRTfhqzGgPbMRqNuM9Wn"
+  "Arcj82pX7HxYKLR92qvgZUAd7vGS1k4hQvAFcPATFdEQ"
 );
 
 export type CircuitName = "init_market_state" | "add_vote" | "resolve_market";
@@ -28,21 +31,23 @@ export function getCompDefOffset(circuitName: CircuitName): number {
   return Buffer.from(getCompDefAccOffset(circuitName)).readUInt32LE(0);
 }
 
-export function getInitCompDefAccounts(
+export async function getInitCompDefAccounts(
+  provider: anchor.AnchorProvider,
   programId: PublicKey,
   payer: PublicKey,
   circuitName: CircuitName
 ) {
   const compDefOffset = getCompDefOffset(circuitName);
+  const mxeAccount = getMXEAccAddress(programId);
+  const arciumProgram = getArciumProgram(provider);
+  const mxeAccountData = await arciumProgram.account.mxeAccount.fetch(mxeAccount);
+  const lutOffset = new BN(mxeAccountData.lutOffsetSlot.toString());
 
   return {
     payer,
-    mxeAccount: getMXEAccAddress(programId),
+    mxeAccount,
     compDefAccount: getCompDefAccAddress(programId, compDefOffset),
-    addressLookupTable: getLookupTableAddress(
-      programId,
-      new anchor.BN(compDefOffset)
-    ),
+    addressLookupTable: getLookupTableAddress(programId, lutOffset),
     lutProgram: AddressLookupTableProgram.programId,
     arciumProgram: ARCIUM_PROGRAM_ID,
     systemProgram: SystemProgram.programId,

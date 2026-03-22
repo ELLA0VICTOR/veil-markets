@@ -41,7 +41,7 @@ export function useArcium() {
    * Decrypt a resolution result
    */
   const decryptResolutionResult = useCallback(
-    (resolverPrivKey, encKey, nonce, cts) => {
+    async (resolverPrivKey, encKey, nonce, cts) => {
       return decryptMarketResult(resolverPrivKey, encKey, nonce, cts);
     },
     []
