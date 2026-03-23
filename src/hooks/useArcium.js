@@ -3,6 +3,7 @@ import { useConnection } from "@solana/wallet-adapter-react";
 import { useAnchorWallet } from "@solana/wallet-adapter-react";
 import { AnchorProvider, BN } from "@coral-xyz/anchor";
 import { decryptMarketResult, generateResolverKeypair } from "../utils/arcium";
+import { ARCIUM_API_BASE, withApiBase } from "../utils/constants.js";
 import {
   getMxePublicKeyWithRetry,
   waitForArciumComputation,
@@ -41,7 +42,7 @@ export function useArcium() {
         isYes,
         lamports,
       });
-      const response = await fetch("/api/arcium/encrypt-vote", {
+      const response = await fetch(withApiBase(ARCIUM_API_BASE, "/api/arcium/encrypt-vote"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -1,7 +1,7 @@
 import { Buffer } from "buffer";
 import { BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
-import { ARCIUM_PROGRAM_ID, CLUSTER_OFFSET } from "./constants.js";
+import { ARCIUM_API_BASE, ARCIUM_PROGRAM_ID, CLUSTER_OFFSET, withApiBase } from "./constants.js";
 import { getProgramId } from "./program.js";
 
 const OFFSET_BUFFER_SIZE = 4;
@@ -105,7 +105,10 @@ export async function getMxePublicKeyWithRetry(
   for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
     try {
       const response = await fetch(
-        `/api/arcium/mxe-public-key?programId=${encodeURIComponent(programId.toBase58())}`
+        withApiBase(
+          ARCIUM_API_BASE,
+          `/api/arcium/mxe-public-key?programId=${encodeURIComponent(programId.toBase58())}`
+        )
       );
       if (response.ok) {
         const body = await response.json();
@@ -136,7 +139,7 @@ export async function waitForArciumComputation(
     computationOffset instanceof BN
       ? computationOffset
       : new BN(computationOffset.toString());
-  const response = await fetch("/api/arcium/await-computation", {
+  const response = await fetch(withApiBase(ARCIUM_API_BASE, "/api/arcium/await-computation"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

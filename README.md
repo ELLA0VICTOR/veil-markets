@@ -1,62 +1,89 @@
-# VEIL - Encrypted Prediction Markets on Solana
+# VEIL
 
-VEIL is a Solana prediction market app integrated with Arcium MPC and a Polymarket-backed import flow.
+VEIL is a Solana prediction market app with:
 
-Current working flows:
-- create custom markets
-- import Polymarket markets into VEIL
-- place bets
-- queue and finalize resolve computations
-- publish and settle results
-- claim winnings
+- custom markets
+- imported Polymarket markets
+- encrypted vote submission via Arcium-assisted flow
+- manual resolution for custom markets
+- result publishing and winner claiming
 
-## Current State
+This repo currently targets **devnet** and uses:
 
-The app is working end-to-end on devnet, but there are a few important implementation details to know up front:
+- a deployed Solana program
+- an Arcium-backed computation flow
+- a backend proxy for Polymarket and Arcium helper routes
+- a React frontend
 
-- Arcium is used for market-state computations (`init_market_state`, `add_vote`, `resolve_market`).
-- The frontend does not call Polymarket directly. It goes through the local/backend proxy in `server/index.js`.
-- The frontend also uses backend-assisted Arcium helper routes for MXE key lookup, vote encryption, computation waiting, and result decryption.
-- Settlement publishing currently uses on-chain `Position` accounts as the source of truth for totals after resolve computation completes.
-- Markets can now start with a `0 SOL` default pool, with optional creator-seeded liquidity if desired.
-- Privacy is not absolute in the current program shape: `Position` accounts store `stake` and `is_yes` on-chain.
+## What The App Does
 
-## Architecture
+There are two market sources:
 
-```text
-Wallet / frontend
-  |
-  | submit market + vote transactions
-  v
-Solana program (`programs/veil_markets/src/lib.rs`)
-  |
-  | queues Arcium computations
-  v
-Arcium devnet cluster (offset 456)
-  |
-  | callbacks update market state
-  v
-Market + Position accounts on Solana
-  |
-  | publish result + claim winnings
-  v
-Settlement
-```
+1. **Custom markets**
+   - created directly inside VEIL
+   - default to **0 SOL** starting pool
+   - can optionally include a creator seed deposit
+   - creator resolves the winner manually after expiry
 
-Backend responsibilities in `server/index.js`:
-- Polymarket proxy (`/api/polymarket/*`)
-- Arcium MXE public key lookup (`/api/arcium/mxe-public-key`)
-- vote encryption (`/api/arcium/encrypt-vote`)
-- computation waiting (`/api/arcium/await-computation`)
-- result decryption (`/api/arcium/decrypt-result`)
+2. **Imported Polymarket markets**
+   - discovered through the Polymarket feed
+   - imported into VEIL as actual on-chain VEIL markets
+   - can also start at **0 SOL** or include an optional creator seed
+   - later resolve against the linked Polymarket condition
+
+## What Happens When A User Bets
+
+The live flow is:
+
+1. user chooses `YES` or `NO`
+2. frontend asks the backend to prepare encrypted vote payload data
+3. wallet signs the actual `place_vote` transaction
+4. Solana program stores the position and updates market state
+5. Arcium computation finalizes the encrypted market state
+6. UI refreshes from chain state
+
+Important:
+
+- a canceled wallet signature should not create a real on-chain bet
+- the UI now shows a clearer wallet-approval phase and captures the transaction signature after submit
+
+## What Happens When A Market Resolves
+
+### Custom markets
+
+1. market creator selects the winner
+2. frontend submits `resolve_market`
+3. Arcium computation completes
+4. app publishes the result on-chain
+5. winners can claim
+
+### Imported Polymarket markets
+
+1. VEIL market is linked to a Polymarket condition
+2. once resolvable, the result path is triggered
+3. settlement is published in VEIL
+4. winners can claim
+
+## Current Reality And Caveats
+
+This part is important.
+
+The app is working end-to-end, but these implementation truths are still important:
+
+- markets now default to **0 SOL** pool unless a creator explicitly seeds them
+- winners claim from the actual vault balance built from bets plus any optional creator seed
+- claiming is **manual**, not automatic
+- `Position` accounts currently store `stake` and `is_yes` on-chain
+- settlement publishing currently reconstructs totals from `Position` accounts after resolve computation
+- this means the privacy model is **not fully private in the strict sense**
+
+So the app works, but the privacy branding is stronger than the current on-chain data model.
 
 ## Repository Layout
 
 ```text
 veil-markets/
-|-- build/
 |-- encrypted-ixs/
-|   `-- src/lib.rs
 |-- programs/
 |   `-- veil_markets/src/lib.rs
 |-- scripts/
@@ -70,82 +97,53 @@ veil-markets/
 |   |-- hooks/
 |   |-- idl/
 |   `-- utils/
-|-- target/
-|-- tests/
 |-- Anchor.toml
 |-- Arcium.toml
 |-- Cargo.toml
 |-- package.json
-|-- README.md
-`-- vite.config.js
+|-- vite.config.js
+`-- README.md
 ```
 
-## Versions
+## Program And Network
 
-This repo is aligned with:
-- Arcium CLI: `0.9.2`
-- `@arcium-hq/client`: `0.9.2`
-- Anchor: `0.32.x`
-- Solana CLI: `2.3.0`
+Current frontend default program id:
+
+- `6Yzx9fKe52tqhKmV81rTmDGH4hXFgiPKU9T5TgPezemR`
+
+Current constants:
+
 - Arcium cluster offset: `456`
-- Recovery set size: `4`
+- Arcium program id: `Arcj82pX7HxYKLR92qvgZUAd7vGS1k4hQvAFcPATFdEQ`
+- minimum bet: `0.01 SOL`
 
-## Prerequisites
+If you deploy a new program id, keep these aligned:
 
-```bash
-solana config set --url devnet
-solana address
-solana balance
-anchor --version
-arcium --version
-docker --version
-```
+- `programs/veil_markets/src/lib.rs`
+- `Anchor.toml`
+- `src/utils/constants.js`
+- `src/idl/veil_markets.json`
 
-You also need:
-- a funded devnet wallet at `~/.config/solana/id.json`
-- Docker running for circuit/program builds
-- a reliable devnet RPC
+## Local Development
 
-## Environment
+Prerequisites:
 
-Frontend / backend environment variables:
-
-```bash
-VITE_PROGRAM_ID=<your deployed program id>
-VITE_RPC_ENDPOINT=https://api.devnet.solana.com
-VITE_POLYMARKET_API_BASE=/api/polymarket
-PORT=8787
-POLYMARKET_UPSTREAM=https://gamma-api.polymarket.com
-POLYMARKET_ALLOW_ORIGIN=https://your-frontend-domain.com
-SOLANA_RPC_URL=https://your-devnet-rpc
-```
-
-Notes:
-- For local dev, `VITE_POLYMARKET_API_BASE=/api/polymarket` is fine.
-- If `VITE_PROGRAM_ID` is not set, the frontend falls back to `src/utils/constants.js`.
-- The backend routes under `/api/arcium/*` assume the same program id and RPC as the frontend deployment you are testing.
-
-## Circuit Hosting
-
-This repo uses the offchain circuit pattern. The circuit URLs are compiled into the program via environment variables.
-
-```bash
-VEIL_INIT_MARKET_STATE_CIRCUIT_URL=https://your-public-storage/init_market_state.arcis
-VEIL_ADD_VOTE_CIRCUIT_URL=https://your-public-storage/add_vote.arcis
-VEIL_RESOLVE_MARKET_CIRCUIT_URL=https://your-public-storage/resolve_market.arcis
-```
-
-Recommended hosts:
-- Supabase Storage
-- public S3 bucket
-- IPFS gateway
-
-## Build Flow
+- Solana CLI configured to devnet
+- Anchor installed
+- Arcium CLI installed
+- Docker running
+- funded wallet at `~/.config/solana/id.json`
 
 Install dependencies:
 
 ```bash
 npm install --legacy-peer-deps
+```
+
+Build frontend:
+
+```bash
+npm run build
 ```
 
 Build circuits + program:
@@ -160,29 +158,135 @@ Refresh frontend IDL after a build/deploy cycle:
 cp target/idl/veil_markets.json src/idl/veil_markets.json
 ```
 
-## Devnet Deployment Flow
+Initialize computation definitions:
 
-### 1. Choose or generate a program keypair
+```bash
+export ANCHOR_PROVIDER_URL=<rpc>
+export ANCHOR_WALLET=~/.config/solana/id.json
+npm run init:comp-defs
+```
 
-Keep these aligned with the same program id:
-- `programs/veil_markets/src/lib.rs`
-- `Anchor.toml`
-- `src/utils/constants.js`
-- `src/idl/veil_markets.json` after rebuild/copy
+Run backend:
 
-### 2. Deploy
+```bash
+npm run server
+```
+
+Run frontend:
+
+```bash
+npm run dev
+```
+
+## Backend Responsibilities
+
+`server/index.js` is not optional for the current app shape.
+
+It handles:
+
+- Polymarket proxy
+- Arcium MXE public key lookup
+- vote encryption helper
+- computation waiting helper
+- result decryption helper
+
+Routes:
+
+- `GET /api/polymarket/*`
+- `GET /api/arcium/mxe-public-key`
+- `POST /api/arcium/encrypt-vote`
+- `POST /api/arcium/await-computation`
+- `POST /api/arcium/decrypt-result`
+
+## Production Deployment
+
+Recommended production-style setup for this repo:
+
+- **backend** on Render
+- **frontend** on Vercel
+
+### 1. Deploy the backend first
+
+Deploy `server/index.js` on Render as a Node service.
+
+Required backend environment variables:
+
+```bash
+PORT=8787
+SOLANA_RPC_URL=https://your-devnet-rpc
+POLYMARKET_UPSTREAM=https://gamma-api.polymarket.com
+POLYMARKET_ALLOW_ORIGIN=https://your-vercel-app.vercel.app
+```
+
+Notes:
+
+- `POLYMARKET_ALLOW_ORIGIN` should be your actual frontend domain, not `*`
+- use a reliable devnet RPC, ideally not the public default
+
+### 2. Deploy the frontend on Vercel
+
+Required frontend environment variables:
+
+```bash
+VITE_PROGRAM_ID=6Yzx9fKe52tqhKmV81rTmDGH4hXFgiPKU9T5TgPezemR
+VITE_RPC_ENDPOINT=https://your-devnet-rpc
+VITE_BACKEND_API_BASE=https://your-render-service.onrender.com
+VITE_POLYMARKET_API_BASE=https://your-render-service.onrender.com/api/polymarket
+```
+
+Notes:
+
+- `VITE_PROGRAM_ID` must match the deployed Solana program
+- `VITE_RPC_ENDPOINT` should point at the same cluster you used for deploy and comp-def init
+- `VITE_BACKEND_API_BASE` is used for the Arcium helper routes from the frontend
+- `VITE_POLYMARKET_API_BASE` should point to your Render backend
+- `VITE_ARCIUM_API_BASE` is optional; if omitted it falls back to `VITE_BACKEND_API_BASE`
+
+### 3. Keep backend and frontend aligned
+
+These must all point to the same live setup:
+
+- Solana program id
+- RPC endpoint
+- backend Arcium helper routes
+- frontend IDL
+- frontend backend-base env vars
+
+If you upgrade the program:
+
+1. rebuild
+2. redeploy
+3. copy fresh IDL into `src/idl/veil_markets.json`
+4. redeploy frontend if needed
+
+## Deploy / Upgrade Flow
+
+Build:
+
+```bash
+cd /mnt/c/Users/hp/Desktop/veil-markets
+bash scripts/build_offchain.sh
+```
+
+Deploy:
 
 ```bash
 arcium deploy \
   --program-name veil_markets \
-  --program-keypair target/deploy/<your-keypair>.json \
+  --program-keypair target/deploy/veil_markets_v5-keypair.json \
   --cluster-offset 456 \
   --recovery-set-size 4 \
   --keypair-path ~/.config/solana/id.json \
   --rpc-url <reliable-devnet-rpc>
 ```
 
-### 3. Initialize computation definitions
+Copy IDL:
+
+```bash
+cp target/idl/veil_markets.json src/idl/veil_markets.json
+```
+
+If circuits changed or comp defs are fresh:
 
 ```bash
 export ANCHOR_PROVIDER_URL=<reliable-devnet-rpc>
@@ -190,54 +294,44 @@ export ANCHOR_WALLET=~/.config/solana/id.json
 npm run init:comp-defs
 ```
 
-### 4. Run backend + frontend
+## Manual Test Flow
 
-Backend:
+Recommended sanity test order:
 
-```bash
-npm run server
-```
+1. create custom market with `0` creator seed
+2. place bet
+3. resolve market
+4. publish result
+5. claim winnings from winning wallet
 
-Frontend:
+Then test Polymarket path:
 
-```bash
-npm run dev
-```
+1. import Polymarket market
+2. place bet
+3. resolve when available
+4. claim winnings
 
-## Test Flow
+## Are We Ready For Render + Vercel?
 
-Recommended manual test order:
+Yes, with the following conditions:
 
-1. create a custom market
-2. place a bet
-3. wait for market end
-4. resolve the market
-5. publish result
-6. claim winnings
+- the current Solana program upgrade is already deployed
+- `src/idl/veil_markets.json` matches that deployment
+- Render backend is live first
+- Vercel frontend points at that backend through `VITE_BACKEND_API_BASE` and the same RPC/program id
+- you are comfortable launching with the current privacy caveat
 
-Polymarket path:
-1. open the import flow
-2. import a Polymarket market into VEIL
-3. place a bet in VEIL
-4. resolve once the market is resolvable
+So this is **good to go for a devnet production-style deployment**, not a final mainnet-grade privacy product.
 
-## Known Caveats
+## Remaining Product Risks
 
-These are still true as of the current implementation:
+Before calling this final-final, keep these in mind:
 
-- The market pool is now driven by bets plus any optional creator seed. There is no mandatory creator-funded starter pool anymore.
-- `Position` accounts store `stake` and `is_yes` on-chain, so the app is not currently fully private in the strict sense implied by the UI branding.
-- Settlement publishing currently reconstructs totals from `Position` accounts after Arcium resolve computation completes, instead of trusting the decrypted result payload directly.
-- `src/idl/veil_markets.json` should be refreshed after deploy-related changes.
-
-## Production Notes
-
-For production, plan around:
-- a dedicated backend deployment for `server/index.js`
-- controlled CORS via `POLYMARKET_ALLOW_ORIGIN`
-- RPC stability and monitoring
-- revisiting the privacy model if fully hidden direction/stake is a hard requirement
-- deciding whether creator-seeded liquidity should stay optional or become role-gated for specific market types
+- wallet cancellation and signature UX is improved, but production monitoring is still a good idea
+- privacy is partial, not absolute
+- settlement still depends on position-based totals
+- imported Polymarket settlement should be tested on more real markets over time
+- Render cold starts may slow helper routes unless your plan avoids sleeping
 
 ## License
 
