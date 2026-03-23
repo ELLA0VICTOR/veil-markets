@@ -164,6 +164,7 @@ export default function CreateMarketModal({
 
   return (
     <div
+      className="create-market-overlay"
       style={{
         position: "fixed",
         inset: 0,
@@ -178,7 +179,7 @@ export default function CreateMarketModal({
       onClick={onClose}
     >
       <div
-        className="anim-scale"
+        className="anim-scale create-market-modal"
         style={{
           width: "100%",
           maxWidth: 520,
@@ -221,7 +222,7 @@ export default function CreateMarketModal({
           </button>
         </div>
 
-        <div style={{ display: "flex", borderBottom: "1px solid var(--border)" }}>
+        <div className="create-market-tabs" style={{ display: "flex", borderBottom: "1px solid var(--border)" }}>
           {[["custom", "Custom"], ["polymarket", "Import from Polymarket"]].map(([v, l]) => (
             <button
               key={v}
@@ -247,6 +248,7 @@ export default function CreateMarketModal({
         </div>
 
         <div
+          className="create-market-body"
           style={{
             padding: "18px 20px",
             overflowY: "auto",
@@ -377,6 +379,7 @@ export default function CreateMarketModal({
         </div>
 
         <div
+          className="create-market-footer"
           style={{
             padding: "14px 20px",
             borderTop: "1px solid var(--border)",

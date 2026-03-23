@@ -42,6 +42,7 @@ export default function Navbar() {
       }}
     >
       <div
+        className="nav-inner"
         style={{
           maxWidth: 1200,
           margin: "0 auto",
@@ -91,7 +92,7 @@ export default function Navbar() {
           </span>
         </button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <div className="nav-center" style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <div
             className="pill"
             style={{
@@ -106,7 +107,9 @@ export default function Navbar() {
           </div>
         </div>
 
-        <WalletButton />
+        <div className="nav-wallet">
+          <WalletButton />
+        </div>
       </div>
     </nav>
   );

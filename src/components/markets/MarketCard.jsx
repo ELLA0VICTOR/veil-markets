@@ -14,6 +14,7 @@ export default function MarketCard({ market, index }) {
       onClick={() => navigate(`#/market/${market.publicKey}`)}
     >
       <div
+        className="market-card-shell"
         style={{
           background: "var(--bg-card)",
           border: "1px solid var(--border)",
@@ -58,7 +59,7 @@ export default function MarketCard({ market, index }) {
         </p>
 
         {/* Stat row */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div className="market-card-stats" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           {[
             { label: "TOTAL POOL", value: `${market.totalSolPool} SOL`, color: "var(--text)" },
             { label: open || market.status === 0 ? "ENDS" : "ENDED", value: <CountdownTimer endTime={market.endTime} /> },
@@ -71,7 +72,7 @@ export default function MarketCard({ market, index }) {
         </div>
 
         {/* Footer */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 2 }}>
+        <div className="market-card-footer" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 2 }}>
           <span style={{ fontSize: 11, color: "var(--text-3)" }}>
             {market.voteCount} {market.voteCount === 1 ? "bet" : "bets"}
           </span>

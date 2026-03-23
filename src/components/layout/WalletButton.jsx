@@ -73,7 +73,7 @@ export default function WalletButton() {
 
   if (connected) {
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div className="wallet-connected" style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {balance !== null && (
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text-2)" }}>
             {balance.toFixed(3)} SOL
@@ -105,7 +105,7 @@ export default function WalletButton() {
   }
 
   return (
-    <div ref={menuRef} style={{ position: "relative" }}>
+    <div className="wallet-menu-wrap" ref={menuRef} style={{ position: "relative" }}>
       <button
         onClick={() => setMenuOpen((open) => !open)}
         style={{ ...base, padding: "7px 16px", background: "#050505", color: "#ffffff", fontWeight: 700 }}

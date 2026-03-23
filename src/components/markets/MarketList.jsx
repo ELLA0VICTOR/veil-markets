@@ -34,6 +34,7 @@ function ImportablePolymarketCard({ market, index, onImport }) {
   return (
     <article className="anim-up" style={{ "--i": index, height: "100%" }}>
       <div
+        className="import-market-card"
         style={{
           background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
           border: "1px solid var(--border)",
@@ -79,7 +80,7 @@ function ImportablePolymarketCard({ market, index, onImport }) {
           {market.question}
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div className="import-market-stats" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           <div style={{ background: "var(--bg-input)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 10px" }}>
             <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", letterSpacing: "0.1em", marginBottom: 4 }}>
               VOLUME
@@ -186,9 +187,9 @@ export default function MarketList() {
   };
 
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "36px 24px 64px" }}>
+    <div className="market-list-root" style={{ maxWidth: 1200, margin: "0 auto", padding: "36px 24px 64px" }}>
       <div className="anim-up" style={{ marginBottom: 32 }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+        <div className="market-list-header" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div>
             <h1 style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 26, letterSpacing: "-0.01em", marginBottom: 6 }}>
               Prediction Markets
@@ -198,7 +199,7 @@ export default function MarketList() {
             </p>
           </div>
 
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="market-list-actions" style={{ display: "flex", gap: 8 }}>
             <button
               onClick={handleRefresh}
               style={{ ...btnBase, padding: "7px 11px", background: "var(--bg-card)", color: "var(--text-2)" }}
@@ -229,7 +230,7 @@ export default function MarketList() {
         </div>
 
         {!loading && markets.length > 0 && (
-          <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
+          <div className="market-list-stats" style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
             {[
               { k: "Markets", v: markets.length },
               { k: "SOL Locked", v: `${markets.reduce((sum, market) => sum + market.totalSolPoolLamports / 1e9, 0).toFixed(2)} SOL` },
@@ -255,7 +256,7 @@ export default function MarketList() {
         )}
       </div>
 
-      <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid var(--border)", paddingBottom: 0 }}>
+      <div className="market-tabs" style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid var(--border)", paddingBottom: 0 }}>
         {TABS.map((tabName) => (
           <button
             key={tabName}
@@ -298,7 +299,7 @@ export default function MarketList() {
       )}
 
       {loading && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 12 }}>
+        <div className="market-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 12 }}>
           {[...Array(6)].map((_, i) => (
             <div
               key={i}
@@ -355,7 +356,7 @@ export default function MarketList() {
       )}
 
       {!loading && !error && (filtered.length > 0 || importablePolymarkets.length > 0) && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 12 }}>
+        <div className="market-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 12 }}>
           {filtered.map((market, index) => (
             <MarketCard key={market.publicKey} market={market} index={index} />
           ))}

@@ -52,11 +52,11 @@ export default function AnimatedReveal({ visible, onClose, totalYes, totalNo, ye
 
   return (
     <div
-      className="grid-bg"
+      className="animated-reveal-overlay grid-bg"
       style={{ position: "fixed", inset: 0, zIndex: 300, background: "#000", display: "flex", alignItems: "center", justifyContent: "center", animation: "fadeIn 400ms ease both" }}
       onClick={onClose}
     >
-      <div style={{ width: "100%", maxWidth: 520, padding: "48px 32px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+      <div className="animated-reveal-card" style={{ width: "100%", maxWidth: 520, padding: "48px 32px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
 
         <p style={{ fontSize: 9, color: "var(--text-3)", letterSpacing: "0.22em", marginBottom: 14 }}>ENCRYPTED VOTES REVEALED</p>
 

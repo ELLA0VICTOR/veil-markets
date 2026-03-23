@@ -151,7 +151,7 @@ export default function ResolutionPanel({ market, onResolved }) {
 
   return (
     <>
-      <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden", marginTop: 12 }}>
+      <div className="resolution-panel" style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden", marginTop: 12 }}>
         <div style={{ padding: "12px 18px", borderBottom: "1px solid var(--border)", background: "var(--bg-input)" }}>
           <p style={{ fontSize: 9, color: "var(--amber)", letterSpacing: "0.12em" }}>MARKET ENDED Â· RESOLUTION AVAILABLE</p>
         </div>
@@ -180,7 +180,7 @@ export default function ResolutionPanel({ market, onResolved }) {
           {!market.isPolymarket && isCreator && (
             <div>
               <p style={{ fontSize: 9, color: "var(--text-3)", letterSpacing: "0.12em", marginBottom: 9 }}>DECLARE WINNER</p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
+              <div className="resolution-choice-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
                 {[true, false].map((v) => {
                   const sel = customWins === v;
                   return (

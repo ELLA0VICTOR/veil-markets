@@ -260,7 +260,7 @@ export default function MarketDetail({ marketPubkey }) {
     userWon;
 
   return (
-    <div className="anim-up" style={{ maxWidth: 780, margin: "0 auto", padding: "36px 24px 64px" }}>
+    <div className="anim-up market-detail-root" style={{ maxWidth: 780, margin: "0 auto", padding: "36px 24px 64px" }}>
       <button
         onClick={() => navigate("#/")}
         style={{
@@ -284,6 +284,7 @@ export default function MarketDetail({ marketPubkey }) {
       </button>
 
       <div
+        className="market-detail-summary"
         style={{
           background: "var(--bg-card)",
           border: "1px solid var(--border)",
@@ -345,7 +346,7 @@ export default function MarketDetail({ marketPubkey }) {
           </div>
         )}
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+        <div className="market-detail-stats" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
           <Stat label="TOTAL POOL" value={`${market.totalSolPool} SOL`} accent="var(--text)" />
           <Stat label="BETS" value={String(market.voteCount)} />
           <Stat label={pastEnd ? "ENDED" : "CLOSES"} value={<CountdownTimer endTime={market.endTime} />} />
@@ -406,6 +407,7 @@ export default function MarketDetail({ marketPubkey }) {
 
       {position && (
         <div
+          className="market-position-card"
           style={{
             background: "var(--bg-card)",
             border: "1px solid var(--border)",
@@ -417,7 +419,7 @@ export default function MarketDetail({ marketPubkey }) {
           <p style={{ fontSize: 9, color: "var(--text-3)", letterSpacing: "0.12em", marginBottom: 9 }}>
             MY POSITION
           </p>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div className="market-position-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span
               style={{
                 fontFamily: "var(--font-mono)",

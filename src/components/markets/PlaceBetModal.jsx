@@ -185,6 +185,7 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
 
   return (
     <div
+      className="place-bet-modal"
       style={{
         background: "var(--bg-card)",
         border: "1px solid var(--border)",
@@ -244,7 +245,7 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
         <p style={{ fontSize: 9, color: "var(--text-3)", letterSpacing: "0.12em", marginBottom: 8 }}>
           YOUR PREDICTION
         </p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 18 }}>
+        <div className="place-bet-choice-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 18 }}>
           {[true, false].map((value) => {
             const selected = isYes === value;
             return (
@@ -275,7 +276,7 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
           AMOUNT
         </p>
 
-        <div style={{ display: "flex", gap: 5, marginBottom: 8 }}>
+        <div className="place-bet-shortcuts" style={{ display: "flex", gap: 5, marginBottom: 8 }}>
           {[
             [25, "25%"],
             [50, "50%"],

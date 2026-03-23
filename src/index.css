@@ -166,3 +166,232 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   font-family: var(--font-sans) !important;
   color: var(--text) !important;
 }
+
+.market-list-root,
+.market-detail-root {
+  width: 100%;
+}
+
+.market-grid {
+  width: 100%;
+}
+
+.market-tabs {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.market-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.market-tabs button {
+  white-space: nowrap;
+}
+
+.market-position-row,
+.market-card-footer,
+.market-list-actions,
+.wallet-connected,
+.nav-inner {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .nav-inner {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    gap: 12px;
+    flex-wrap: wrap;
+    height: auto !important;
+    min-height: 58px;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+  }
+
+  .nav-center {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .market-list-root,
+  .market-detail-root {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    padding-top: 24px !important;
+  }
+
+  .market-list-header {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .market-list-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .market-list-actions > button {
+    flex: 1 1 0;
+    min-height: 40px;
+    justify-content: center;
+  }
+
+  .market-detail-summary,
+  .resolution-panel,
+  .market-position-card,
+  .place-bet-modal,
+  .import-market-card {
+    border-radius: 12px !important;
+  }
+
+  .market-detail-stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  .market-position-row {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .animated-reveal-card {
+    padding: 36px 20px !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 680px) {
+  html {
+    font-size: 15px;
+  }
+
+  .grid-bg {
+    background-size: 32px 32px;
+  }
+
+  .nav-inner {
+    gap: 10px;
+  }
+
+  .nav-center .pill {
+    font-size: 8px !important;
+    padding: 3px 8px !important;
+  }
+
+  .wallet-connected {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px !important;
+  }
+
+  .wallet-connected > span {
+    font-size: 10px !important;
+    min-width: 0;
+  }
+
+  .wallet-connected > button {
+    flex-shrink: 0;
+  }
+
+  .wallet-menu-wrap {
+    width: 100%;
+  }
+
+  .wallet-menu-wrap > button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .market-list-root,
+  .market-detail-root {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-bottom: 40px !important;
+  }
+
+  .market-list-stats {
+    display: grid !important;
+    grid-template-columns: 1fr;
+    gap: 8px !important;
+  }
+
+  .market-list-stats > div {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .market-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .market-card-shell {
+    padding: 16px !important;
+  }
+
+  .market-card-stats,
+  .import-market-stats,
+  .place-bet-choice-grid,
+  .resolution-choice-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .market-card-footer {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 8px;
+  }
+
+  .create-market-overlay {
+    align-items: flex-end !important;
+    padding: 8px !important;
+  }
+
+  .create-market-modal {
+    max-width: 100% !important;
+    max-height: 94vh !important;
+    border-radius: 16px 16px 0 0 !important;
+  }
+
+  .create-market-tabs button {
+    font-size: 10px !important;
+    padding: 12px 8px !important;
+  }
+
+  .create-market-body {
+    padding: 16px !important;
+  }
+
+  .create-market-footer {
+    padding: 12px 16px !important;
+    flex-direction: column-reverse;
+  }
+
+  .create-market-footer > button {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .place-bet-shortcuts {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .place-bet-shortcuts > button {
+    min-height: 36px;
+  }
+
+  .place-bet-modal {
+    margin-bottom: 10px !important;
+  }
+
+  .animated-reveal-card {
+    padding: 28px 16px !important;
+  }
+
+  .animated-reveal-card p,
+  .animated-reveal-card span {
+    word-break: break-word;
+  }
+}
