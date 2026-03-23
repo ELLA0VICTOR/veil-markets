@@ -36,6 +36,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      "/api/arcium": {
+        target: "http://localhost:8787",
+        changeOrigin: true,
+        secure: false,
+      },
       "/api/polymarket": {
         target: "http://localhost:8787",
         changeOrigin: true,

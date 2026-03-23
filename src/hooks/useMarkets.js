@@ -4,6 +4,7 @@ import { AnchorProvider } from "@coral-xyz/anchor";
 import { useAnchorWallet } from "@solana/wallet-adapter-react";
 import { decodeQuestion, lamportsToSol } from "../utils/solana";
 import { bytesToConditionId, isZeroConditionId, fetchPolymarketMarket } from "../utils/polymarket";
+import { getArchivedMarketIds } from "../utils/archivedMarkets";
 import { createReadonlyProvider, createVeilProgram } from "../utils/program";
 
 const POLL_INTERVAL = 15_000;
@@ -75,9 +76,11 @@ export function useMarkets() {
         })
       );
 
+      const archivedIds = new Set(getArchivedMarketIds());
       const validMarkets = enriched
         .filter((r) => r.status === "fulfilled")
         .map((r) => r.value)
+        .filter((market) => !archivedIds.has(market.publicKey))
         .sort((a, b) => b.totalSolPoolLamports - a.totalSolPoolLamports);
 
       setMarkets(validMarkets);
@@ -93,6 +96,16 @@ export function useMarkets() {
     fetchMarkets();
     intervalRef.current = setInterval(fetchMarkets, POLL_INTERVAL);
     return () => clearInterval(intervalRef.current);
+  }, [fetchMarkets]);
+
+  useEffect(() => {
+    const handleArchiveUpdate = () => {
+      fetchMarkets();
+    };
+
+    window.addEventListener("veil:archived-markets-updated", handleArchiveUpdate);
+    return () =>
+      window.removeEventListener("veil:archived-markets-updated", handleArchiveUpdate);
   }, [fetchMarkets]);
 
   return { markets, loading, error, refetch: fetchMarkets };

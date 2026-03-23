@@ -97,16 +97,24 @@ export function getCircuitAccounts(circuitName, computationOffset) {
 }
 
 export async function getMxePublicKeyWithRetry(
-  provider,
+  _provider,
   { maxRetries = 20, retryDelayMs = 1500 } = {}
 ) {
-  const { getMXEPublicKey } = await import("@arcium-hq/client");
   const programId = getProgramId();
 
   for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
     try {
-      const key = await getMXEPublicKey(provider, programId);
-      if (key) return key;
+      const response = await fetch(
+        `/api/arcium/mxe-public-key?programId=${encodeURIComponent(programId.toBase58())}`
+      );
+      if (response.ok) {
+        const body = await response.json();
+        const key = Array.isArray(body?.key) ? Uint8Array.from(body.key) : null;
+        if (key) return key;
+      } else if (response.status !== 404) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body?.message || body?.error || `MXE key request failed (${response.status})`);
+      }
     } catch (error) {
       if (attempt === maxRetries) throw error;
     }
@@ -120,20 +128,33 @@ export async function getMxePublicKeyWithRetry(
 }
 
 export async function waitForArciumComputation(
-  provider,
+  _provider,
   computationOffset,
   commitment = "confirmed"
 ) {
-  const { awaitComputationFinalization } = await import("@arcium-hq/client");
   const offset =
     computationOffset instanceof BN
       ? computationOffset
       : new BN(computationOffset.toString());
+  const response = await fetch("/api/arcium/await-computation", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      programId: getProgramId().toBase58(),
+      computationOffset: offset.toString(),
+      commitment,
+    }),
+  });
 
-  return awaitComputationFinalization(
-    provider,
-    offset,
-    getProgramId(),
-    commitment
-  );
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(
+      body?.message || body?.error || `Await computation failed (${response.status})`
+    );
+  }
+
+  const body = await response.json();
+  return body?.result ?? null;
 }

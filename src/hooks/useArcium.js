@@ -1,12 +1,13 @@
 import { useCallback } from "react";
 import { useConnection } from "@solana/wallet-adapter-react";
 import { useAnchorWallet } from "@solana/wallet-adapter-react";
-import { AnchorProvider } from "@coral-xyz/anchor";
-import { encryptVote, decryptMarketResult, generateResolverKeypair } from "../utils/arcium";
+import { AnchorProvider, BN } from "@coral-xyz/anchor";
+import { decryptMarketResult, generateResolverKeypair } from "../utils/arcium";
 import {
   getMxePublicKeyWithRetry,
   waitForArciumComputation,
 } from "../utils/arciumAccounts";
+import { getProgramId } from "../utils/program";
 
 export function useArcium() {
   const { connection } = useConnection();
@@ -20,7 +21,12 @@ export function useArcium() {
     const provider = new AnchorProvider(connection, wallet, {
       commitment: "confirmed",
     });
-    return getMxePublicKeyWithRetry(provider);
+    const key = await getMxePublicKeyWithRetry(provider);
+    console.log("[useArcium] MXE public key fetched", {
+      length: key?.length,
+      preview: key ? Array.from(key.slice(0, 4)) : null,
+    });
+    return key;
   }, [connection, wallet]);
 
   /**
@@ -31,8 +37,39 @@ export function useArcium() {
    */
   const encryptVoteForSubmission = useCallback(
     async (isYes, lamports) => {
-      const mxePublicKey = await getMxePublicKey();
-      return encryptVote(isYes, BigInt(lamports), mxePublicKey);
+      console.log("[useArcium] encryptVoteForSubmission:start", {
+        isYes,
+        lamports,
+      });
+      const response = await fetch("/api/arcium/encrypt-vote", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          programId: getProgramId().toBase58(),
+          isYes,
+          stakeLamports: String(lamports),
+        }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body?.message || body?.error || `Encrypt vote failed (${response.status})`);
+      }
+
+      const body = await response.json();
+      const payload = {
+        nonce: new BN(body.nonce),
+        publicKey: body.publicKey,
+        ciphertexts: body.ciphertexts.map((ct) => Uint8Array.from(ct)),
+      };
+      console.log("[useArcium] encryptVoteForSubmission:done", {
+        nonce: payload?.nonce?.toString?.() ?? payload?.nonce,
+        ciphertextCount: payload?.ciphertexts?.length,
+        voterPubkeyLen: payload?.publicKey?.length,
+      });
+      return payload;
     },
     [getMxePublicKey]
   );
@@ -56,6 +93,9 @@ export function useArcium() {
       if (!wallet) throw new Error("Wallet not connected");
       const provider = new AnchorProvider(connection, wallet, {
         commitment: "confirmed",
+      });
+      console.log("[useArcium] awaitComputation:start", {
+        computationOffset: computationOffset?.toString?.() ?? computationOffset,
       });
       return waitForArciumComputation(provider, computationOffset, "confirmed");
     },

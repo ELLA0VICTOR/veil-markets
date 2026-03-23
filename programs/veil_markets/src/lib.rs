@@ -4,7 +4,7 @@ use arcium_anchor::prelude::*;
 use arcium_client::idl::arcium::types::{CallbackAccount, CircuitSource, OffChainCircuitSource};
 use arcium_macros::*;
 
-declare_id!("bJ9U7u1ucVuiRPmusoaKiHj7jNyKy9FLQ57tTjE62e7");
+declare_id!("6Yzx9fKe52tqhKmV81rTmDGH4hXFgiPKU9T5TgPezemR");
 
 const COMP_DEF_OFFSET_INIT_MARKET_STATE: u32 = comp_def_offset("init_market_state");
 const COMP_DEF_OFFSET_ADD_VOTE: u32 = comp_def_offset("add_vote");
@@ -286,6 +286,7 @@ pub mod veil_markets {
         ctx: Context<ResolveMarket>,
         computation_offset: u64,
         resolver_pub_key: [u8; 32],
+        resolver_nonce: u128,
     ) -> Result<()> {
         let market = &mut ctx.accounts.market;
 
@@ -312,8 +313,9 @@ pub mod veil_markets {
                 .plaintext_u128(state_nonce)
                 .encrypted_u64(state_ct_yes)
                 .encrypted_u64(state_ct_no)
-                // observer: Shared
+                // observer: SharedEncrypted<Resolver, ResultSummary>
                 .x25519_pubkey(resolver_pub_key)
+                .plaintext_u128(resolver_nonce)
                 .build(),
             vec![callback_ix],
             1,
@@ -615,7 +617,7 @@ pub struct PlaceVote<'info> {
     #[account(mut)]
     pub voter: Signer<'info>,
     #[account(mut)]
-    pub market: Account<'info, Market>,
+    pub market: Box<Account<'info, Market>>,
     /// CHECK: vault PDA verified by seeds
     #[account(
         mut,
@@ -630,8 +632,8 @@ pub struct PlaceVote<'info> {
         seeds = [b"position", market.key().as_ref(), voter.key().as_ref()],
         bump,
     )]
-    pub position: Account<'info, Position>,
-    pub mxe_account: Account<'info, MXEAccount>,
+    pub position: Box<Account<'info, Position>>,
+    pub mxe_account: Box<Account<'info, MXEAccount>>,
     #[account(
         init_if_needed,
         payer = voter,
@@ -639,23 +641,23 @@ pub struct PlaceVote<'info> {
         seeds = [SIGN_PDA_SEED],
         bump,
     )]
-    pub sign_pda_account: Account<'info, ArciumSignerAccount>,
+    pub sign_pda_account: Box<Account<'info, ArciumSignerAccount>>,
     #[account(mut)]
     /// CHECK: Mempool PDA is owned and validated by the Arcium program.
     pub mempool_account: UncheckedAccount<'info>,
     #[account(mut)]
     /// CHECK: Executing pool PDA is owned and validated by the Arcium program.
     pub executing_pool: UncheckedAccount<'info>,
-    pub comp_def_account: Account<'info, ComputationDefinitionAccount>,
+    pub comp_def_account: Box<Account<'info, ComputationDefinitionAccount>>,
     #[account(mut)]
     /// CHECK: Computation PDA is derived and validated by the Arcium program for this offset.
     pub computation_account: UncheckedAccount<'info>,
     #[account(mut)]
-    pub cluster_account: Account<'info, Cluster>,
+    pub cluster_account: Box<Account<'info, Cluster>>,
     #[account(mut, address = ARCIUM_FEE_POOL_ACCOUNT_ADDRESS)]
-    pub pool_account: Account<'info, FeePool>,
+    pub pool_account: Box<Account<'info, FeePool>>,
     #[account(mut, address = ARCIUM_CLOCK_ACCOUNT_ADDRESS)]
-    pub clock_account: Account<'info, ClockAccount>,
+    pub clock_account: Box<Account<'info, ClockAccount>>,
     pub arcium_program: Program<'info, Arcium>,
     pub system_program: Program<'info, System>,
 }
@@ -683,8 +685,8 @@ pub struct ResolveMarket<'info> {
     #[account(mut)]
     pub resolver: Signer<'info>,
     #[account(mut)]
-    pub market: Account<'info, Market>,
-    pub mxe_account: Account<'info, MXEAccount>,
+    pub market: Box<Account<'info, Market>>,
+    pub mxe_account: Box<Account<'info, MXEAccount>>,
     #[account(
         init_if_needed,
         payer = resolver,
@@ -692,23 +694,23 @@ pub struct ResolveMarket<'info> {
         seeds = [SIGN_PDA_SEED],
         bump,
     )]
-    pub sign_pda_account: Account<'info, ArciumSignerAccount>,
+    pub sign_pda_account: Box<Account<'info, ArciumSignerAccount>>,
     #[account(mut)]
     /// CHECK: Mempool PDA is owned and validated by the Arcium program.
     pub mempool_account: UncheckedAccount<'info>,
     #[account(mut)]
     /// CHECK: Executing pool PDA is owned and validated by the Arcium program.
     pub executing_pool: UncheckedAccount<'info>,
-    pub comp_def_account: Account<'info, ComputationDefinitionAccount>,
+    pub comp_def_account: Box<Account<'info, ComputationDefinitionAccount>>,
     #[account(mut)]
     /// CHECK: Computation PDA is derived and validated by the Arcium program for this offset.
     pub computation_account: UncheckedAccount<'info>,
     #[account(mut)]
-    pub cluster_account: Account<'info, Cluster>,
+    pub cluster_account: Box<Account<'info, Cluster>>,
     #[account(mut, address = ARCIUM_FEE_POOL_ACCOUNT_ADDRESS)]
-    pub pool_account: Account<'info, FeePool>,
+    pub pool_account: Box<Account<'info, FeePool>>,
     #[account(mut, address = ARCIUM_CLOCK_ACCOUNT_ADDRESS)]
-    pub clock_account: Account<'info, ClockAccount>,
+    pub clock_account: Box<Account<'info, ClockAccount>>,
     pub arcium_program: Program<'info, Arcium>,
     pub system_program: Program<'info, System>,
 }

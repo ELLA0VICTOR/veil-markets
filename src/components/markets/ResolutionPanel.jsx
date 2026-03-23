@@ -5,7 +5,7 @@ import { AnchorProvider, BN } from "@coral-xyz/anchor";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { PROGRAM_ID, ARCIUM_PROGRAM_ID } from "../../utils/constants";
 import { checkPolymarketResolution } from "../../utils/polymarket";
-import { decryptMarketResult, generateResolverKeypair } from "../../utils/arcium";
+import { generateResolverKeypair } from "../../utils/arcium";
 import { useWallet } from "../../hooks/useWallet";
 import { getCircuitAccounts, waitForArciumComputation } from "../../utils/arciumAccounts";
 import { createVeilProgram } from "../../utils/program";
@@ -18,6 +18,35 @@ const PHASES = {
   publishing: "Publishing result on-chainâ€¦",
   done:       "Market settled.",
 };
+
+async function fetchPositionTotals(program, marketPubkey) {
+  const positions = await program.account.position.all([
+    {
+      memcmp: {
+        offset: 8,
+        bytes: marketPubkey.toBase58(),
+      },
+    },
+  ]);
+
+  let totalYes = 0n;
+  let totalNo = 0n;
+
+  for (const { account } of positions) {
+    const stake = BigInt(account.stake.toString());
+    if (account.isYes) {
+      totalYes += stake;
+    } else {
+      totalNo += stake;
+    }
+  }
+
+  return {
+    totalYes,
+    totalNo,
+    count: positions.length,
+  };
+}
 
 export default function ResolutionPanel({ market, onResolved }) {
   const { connection } = useConnection();
@@ -56,31 +85,61 @@ export default function ResolutionPanel({ market, onResolved }) {
       const { privateKey: privKey, publicKey: pubKey } = generateResolverKeypair();
       const off  = crypto.getRandomValues(new Uint8Array(8));
       const cOff = new BN(new DataView(off.buffer).getBigUint64(0,true).toString());
+      const resolverNonceBytes = crypto.getRandomValues(new Uint8Array(16));
+      const resolverNonceBigInt = Array.from(resolverNonceBytes).reduce(
+        (acc, byte, index) => acc | (BigInt(byte) << BigInt(index * 8)),
+        0n
+      );
+      const resolverNonce = new BN(resolverNonceBigInt.toString());
       const mPK  = new PublicKey(market.publicKey);
-      await program.methods.resolveMarket(cOff, Array.from(pubKey))
+      console.log("[ResolutionPanel] resolve:start", {
+        market: market.publicKey,
+        computationOffset: cOff.toString(),
+        resolverPubKeyLength: pubKey?.length,
+        resolverNonce: resolverNonce.toString(),
+        override,
+        isPolymarket: market.isPolymarket,
+      });
+      await program.methods.resolveMarket(cOff, Array.from(pubKey), resolverNonce)
         .accounts({ resolver: publicKey, market: mPK, ...getCircuitAccounts("resolve_market", cOff), resolveMarketCallbackProgram: new PublicKey(PROGRAM_ID), arciumProgram: new PublicKey(ARCIUM_PROGRAM_ID), systemProgram: SystemProgram.programId })
         .rpc({ commitment: "confirmed" });
+      console.log("[ResolutionPanel] resolve:submitted", {
+        computationOffset: cOff.toString(),
+      });
       setPhase("decrypting");
       await waitForArciumComputation(provider, cOff, "confirmed");
-      const upd = await program.account.market.fetch(mPK);
-      const dec = await decryptMarketResult(
-        privKey,
-        Array.from(upd.resultEncryptionKey),
-        BigInt(upd.resultNonce.toString()),
-        [
-          Array.from(upd.resultCtTotalYes),
-          Array.from(upd.resultCtTotalNo),
-          Array.from(upd.resultCtYesWins),
-        ]
-      );
-      const yesWins = override !== null ? override : dec.yesWins;
-      setRevealData({ totalYes: dec.totalYes, totalNo: dec.totalNo, yesWins });
+      console.log("[ResolutionPanel] resolve:computationDone", {
+        computationOffset: cOff.toString(),
+      });
+      const positionTotals = await fetchPositionTotals(program, mPK);
+      console.log("[ResolutionPanel] publish:usingPositionTotals", {
+        market: market.publicKey,
+        positionCount: positionTotals.count,
+        totalYes: positionTotals.totalYes.toString(),
+        totalNo: positionTotals.totalNo.toString(),
+      });
+      const yesWins = override !== null ? override : positionTotals.totalYes > positionTotals.totalNo;
+      setRevealData({ totalYes: positionTotals.totalYes, totalNo: positionTotals.totalNo, yesWins });
       setPhase("publishing");
-      await program.methods.publishResult(yesWins, new BN(dec.totalYes.toString()), new BN(dec.totalNo.toString()))
+      await program.methods.publishResult(
+        yesWins,
+        new BN(positionTotals.totalYes.toString()),
+        new BN(positionTotals.totalNo.toString())
+      )
         .accounts({ authority: publicKey, market: mPK }).rpc({ commitment: "confirmed" });
       setPhase("done");
       setShowReveal(true);
-    } catch (e) { setErr(e.message || "Resolution failed"); setPhase("idle"); }
+    } catch (e) {
+      console.error("[ResolutionPanel] resolve:error", e);
+      if (e?.transactionLogs) {
+        console.error("[ResolutionPanel] transactionLogs", e.transactionLogs);
+      }
+      if (e?.logs) {
+        console.error("[ResolutionPanel] logs", e.logs);
+      }
+      setErr(e.message || "Resolution failed");
+      setPhase("idle");
+    }
   };
 
   if (market.status === 2) return (

@@ -38,6 +38,16 @@ function u128ToBytes(value) {
  * @returns {{ ciphertexts, nonce, nonceBytes, publicKey, privateKey, sharedSecret }}
  */
 export async function encryptVote(is_yes, stakeLamports, mxePublicKey) {
+  console.log("[arcium] encryptVote:input", {
+    is_yes,
+    stakeLamports: stakeLamports?.toString?.() ?? stakeLamports,
+    mxePublicKeyType: mxePublicKey?.constructor?.name,
+    mxePublicKeyLength: mxePublicKey?.length,
+    mxePublicKeyPreview:
+      mxePublicKey && typeof mxePublicKey.slice === "function"
+        ? Array.from(mxePublicKey.slice(0, 4))
+        : null,
+  });
   const RescueCipher = await getRescueCipher();
   const privateKey = x25519.utils.randomPrivateKey();
   const publicKey = x25519.getPublicKey(privateKey);
@@ -52,6 +62,14 @@ export async function encryptVote(is_yes, stakeLamports, mxePublicKey) {
   const nonce = bytesToU128(nonceBytes);
 
   const ciphertexts = cipher.encrypt(plaintext, nonceBytes);
+
+  console.log("[arcium] encryptVote:output", {
+    privateKeyLength: privateKey?.length,
+    publicKeyLength: publicKey?.length,
+    sharedSecretLength: sharedSecret?.length,
+    nonce: nonce.toString(),
+    ciphertextCount: ciphertexts?.length,
+  });
 
   return {
     ciphertexts, // Array of Uint8Array[32] — one per field
@@ -84,8 +102,7 @@ export async function decryptMarketResult(
   );
   const cipher = new RescueCipher(sharedSecret);
 
-  // Nonce used for output is input_nonce + 1 (Arcium increments nonce for outputs)
-  const outputNonce = u128ToBytes(BigInt(nonce) + 1n);
+  const outputNonce = u128ToBytes(BigInt(nonce));
 
   const cts = ciphertexts.map((ct) => Array.from(ct));
   const plaintext = cipher.decrypt(cts, outputNonce);

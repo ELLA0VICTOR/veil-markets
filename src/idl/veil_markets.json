@@ -1,5 +1,5 @@
 {
-  "address": "bJ9U7u1ucVuiRPmusoaKiHj7jNyKy9FLQ57tTjE62e7",
+  "address": "6Yzx9fKe52tqhKmV81rTmDGH4hXFgiPKU9T5TgPezemR",
   "metadata": {
     "name": "veil_markets",
     "version": "0.1.0",
@@ -845,6 +845,10 @@
               32
             ]
           }
+        },
+        {
+          "name": "resolver_nonce",
+          "type": "u128"
         }
       ]
     },

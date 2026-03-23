@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/veil_markets.json`.
  */
 export type VeilMarkets = {
-  "address": "bJ9U7u1ucVuiRPmusoaKiHj7jNyKy9FLQ57tTjE62e7",
+  "address": "6Yzx9fKe52tqhKmV81rTmDGH4hXFgiPKU9T5TgPezemR",
   "metadata": {
     "name": "veilMarkets",
     "version": "0.1.0",
@@ -851,6 +851,10 @@ export type VeilMarkets = {
               32
             ]
           }
+        },
+        {
+          "name": "resolverNonce",
+          "type": "u128"
         }
       ]
     },

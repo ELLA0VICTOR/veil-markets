@@ -8,6 +8,7 @@ import { navigate } from "../../utils/navigation";
 import { PROGRAM_ID } from "../../utils/constants";
 import { decodeQuestion, lamportsToSol } from "../../utils/solana";
 import { bytesToConditionId, isZeroConditionId, fetchPolymarketMarket } from "../../utils/polymarket";
+import { archiveMarket, isMarketArchived } from "../../utils/archivedMarkets";
 import { useWallet } from "../../hooks/useWallet";
 import { createReadonlyProvider, createVeilProgram } from "../../utils/program";
 import StatusBadge from "../ui/StatusBadge";
@@ -39,6 +40,7 @@ export default function MarketDetail({ marketPubkey }) {
   const [error, setError]       = useState(null);
   const [showBet, setShowBet]   = useState(false);
   const [position, setPosition] = useState(null);
+  const [archived, setArchived] = useState(false);
 
   const fetchMarket = useCallback(async () => {
     try {
@@ -78,6 +80,7 @@ export default function MarketDetail({ marketPubkey }) {
           setPosition({ stake: lamportsToSol(pos.stake), isYes: pos.isYes, hasClaimed: pos.hasClaimed });
         } catch { setPosition(null); }
       }
+      setArchived(isMarketArchived(pubkey.toBase58()));
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
   }, [connection, wallet, marketPubkey, publicKey]);
@@ -86,6 +89,14 @@ export default function MarketDetail({ marketPubkey }) {
 
   const pastEnd = market && new Date() >= market.endTime;
   const canBet  = market?.status === 1 && !pastEnd && !position;
+  const canArchive = market && publicKey && market.creator === publicKey.toBase58();
+
+  const handleArchive = () => {
+    if (!market) return;
+    archiveMarket(market.publicKey);
+    setArchived(true);
+    navigate("#/");
+  };
 
   if (loading) return (
     <div style={{ maxWidth: 780, margin: "0 auto", padding: "40px 24px" }}>
@@ -135,6 +146,27 @@ export default function MarketDetail({ marketPubkey }) {
         <h1 style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "clamp(17px, 3vw, 24px)", lineHeight: 1.35, letterSpacing: "-0.01em", marginBottom: 22 }}>
           {market.question}
         </h1>
+        {canArchive && !archived && (
+          <div style={{ marginBottom: 18 }}>
+            <button
+              onClick={handleArchive}
+              style={{
+                background: "var(--red-dim)",
+                color: "var(--red)",
+                border: "1px solid var(--red-border)",
+                borderRadius: 9,
+                padding: "9px 14px",
+                fontFamily: "var(--font-mono)",
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.05em",
+                cursor: "pointer",
+              }}
+            >
+              ARCHIVE MARKET
+            </button>
+          </div>
+        )}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
           <Stat label="PRIZE POOL" value={`${market.totalSolPool} SOL`} accent="var(--text)" />
           <Stat label="BETS" value={String(market.voteCount)} />
