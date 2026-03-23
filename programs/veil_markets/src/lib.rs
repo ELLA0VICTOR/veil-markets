@@ -11,7 +11,6 @@ const COMP_DEF_OFFSET_ADD_VOTE: u32 = comp_def_offset("add_vote");
 const COMP_DEF_OFFSET_RESOLVE_MARKET: u32 = comp_def_offset("resolve_market");
 
 const CLUSTER_OFFSET: u64 = 456;
-const MIN_INITIAL_POOL_LAMPORTS: u64 = 50_000_000; // 0.05 SOL
 const MIN_BET_LAMPORTS: u64 = 10_000_000; // 0.01 SOL
 
 fn init_market_state_circuit_url() -> String {
@@ -88,6 +87,7 @@ pub mod veil_markets {
         computation_offset: u64,
         question: [u8; 280],
         end_time: i64,
+        initial_pool_lamports: u64,
         is_polymarket: bool,
         polymarket_condition_id: [u8; 32],
     ) -> Result<()> {
@@ -97,11 +97,12 @@ pub mod veil_markets {
             VeilError::InvalidEndTime
         );
 
-        // Creator must have enough SOL to cover the initial deposit + rent
-        require!(
-            ctx.accounts.creator.lamports() >= MIN_INITIAL_POOL_LAMPORTS,
-            VeilError::BelowMinimumStake
-        );
+        if initial_pool_lamports > 0 {
+            require!(
+                ctx.accounts.creator.lamports() >= initial_pool_lamports,
+                VeilError::BelowMinimumStake
+            );
+        }
 
         let market = &mut ctx.accounts.market;
         market.creator = ctx.accounts.creator.key();
@@ -110,7 +111,7 @@ pub mod veil_markets {
         market.status = 0; // initializing
         market.is_polymarket = is_polymarket;
         market.polymarket_condition_id = polymarket_condition_id;
-        market.total_sol_pool = MIN_INITIAL_POOL_LAMPORTS;
+        market.total_sol_pool = initial_pool_lamports;
         market.vote_count = 0;
         market.state_nonce = 0;
         market.state_ct_yes = [0u8; 32];
@@ -126,15 +127,16 @@ pub mod veil_markets {
         market.result_published = false;
         market.bump = ctx.bumps.market;
 
-        // Transfer initial deposit from creator to vault PDA
-        let cpi_context = CpiContext::new(
-            ctx.accounts.system_program.to_account_info(),
-            system_program::Transfer {
-                from: ctx.accounts.creator.to_account_info(),
-                to: ctx.accounts.vault.to_account_info(),
-            },
-        );
-        system_program::transfer(cpi_context, MIN_INITIAL_POOL_LAMPORTS)?;
+        if initial_pool_lamports > 0 {
+            let cpi_context = CpiContext::new(
+                ctx.accounts.system_program.to_account_info(),
+                system_program::Transfer {
+                    from: ctx.accounts.creator.to_account_info(),
+                    to: ctx.accounts.vault.to_account_info(),
+                },
+            );
+            system_program::transfer(cpi_context, initial_pool_lamports)?;
+        }
 
         // Queue init_market_state MPC computation (no inputs needed)
         let callback_ix = <InitMarketStateCallback as CallbackCompAccs>::callback_ix(computation_offset, &ctx.accounts.mxe_account, &[CallbackAccount { pubkey: ctx.accounts.market.key(), is_writable: true }])?;

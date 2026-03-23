@@ -85,6 +85,7 @@ async function main() {
     const conditionIdArray = Array.from(conditionIdBytes.slice(0, 32));
 
     const computationOffset = new anchor.BN(randomBytes(8));
+    const initialPoolLamports = new anchor.BN(0);
 
     const [marketPda] = anchor.web3.PublicKey.findProgramAddressSync(
       [
@@ -112,6 +113,7 @@ async function main() {
           computationOffset,
           Array.from(questionBytes),
           endTime,
+          initialPoolLamports,
           true,
           conditionIdArray
         )

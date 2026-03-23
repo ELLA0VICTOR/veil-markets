@@ -18,7 +18,7 @@ The app is working end-to-end on devnet, but there are a few important implement
 - The frontend does not call Polymarket directly. It goes through the local/backend proxy in `server/index.js`.
 - The frontend also uses backend-assisted Arcium helper routes for MXE key lookup, vote encryption, computation waiting, and result decryption.
 - Settlement publishing currently uses on-chain `Position` accounts as the source of truth for totals after resolve computation completes.
-- The custom market initial pool is currently fixed on-chain at `0.05 SOL` (`MIN_INITIAL_POOL_LAMPORTS`) even if the UI allows editing the value.
+- Markets can now start with a `0 SOL` default pool, with optional creator-seeded liquidity if desired.
 - Privacy is not absolute in the current program shape: `Position` accounts store `stake` and `is_yes` on-chain.
 
 ## Architecture
@@ -225,7 +225,7 @@ Polymarket path:
 
 These are still true as of the current implementation:
 
-- The custom market initial pool input is not honored on-chain yet; the program uses a hardcoded `0.05 SOL` initial pool.
+- The market pool is now driven by bets plus any optional creator seed. There is no mandatory creator-funded starter pool anymore.
 - `Position` accounts store `stake` and `is_yes` on-chain, so the app is not currently fully private in the strict sense implied by the UI branding.
 - Settlement publishing currently reconstructs totals from `Position` accounts after Arcium resolve computation completes, instead of trusting the decrypted result payload directly.
 - `src/idl/veil_markets.json` should be refreshed after deploy-related changes.
@@ -237,7 +237,7 @@ For production, plan around:
 - controlled CORS via `POLYMARKET_ALLOW_ORIGIN`
 - RPC stability and monitoring
 - revisiting the privacy model if fully hidden direction/stake is a hard requirement
-- wiring the custom initial pool amount properly into the on-chain program
+- deciding whether creator-seeded liquidity should stay optional or become role-gated for specific market types
 
 ## License
 

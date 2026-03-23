@@ -13,7 +13,7 @@ veil_markets = "6Yzx9fKe52tqhKmV81rTmDGH4hXFgiPKU9T5TgPezemR"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "https://devnet.helius-rpc.com/?api-key=c43dba9b-10c3-46cf-8d09-74a514c07108"
 wallet = "~/.config/solana/id.json"
 
 [workspace]

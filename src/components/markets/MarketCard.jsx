@@ -60,7 +60,7 @@ export default function MarketCard({ market, index }) {
         {/* Stat row */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           {[
-            { label: "POOL", value: `${market.totalSolPool} SOL`, color: "var(--text)" },
+            { label: "TOTAL POOL", value: `${market.totalSolPool} SOL`, color: "var(--text)" },
             { label: open || market.status === 0 ? "ENDS" : "ENDED", value: <CountdownTimer endTime={market.endTime} /> },
           ].map(({ label, value, color }) => (
             <div key={label} style={{ background: "var(--bg-input)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 10px" }}>

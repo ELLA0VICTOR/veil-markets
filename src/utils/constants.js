@@ -6,7 +6,7 @@ export const RPC_ENDPOINT =
 export const POLYMARKET_API =
   import.meta.env.VITE_POLYMARKET_API_BASE || "/api/polymarket";
 export const MIN_BET_SOL = 0.01;
-export const MIN_INITIAL_POOL_SOL = 0.05;
+export const DEFAULT_INITIAL_POOL_SOL = 0;
 export const MARKET_SEED = "market";
 export const VAULT_SEED = "vault";
 export const POSITION_SEED = "position";
