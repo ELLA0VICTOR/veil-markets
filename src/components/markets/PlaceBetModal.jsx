@@ -30,8 +30,9 @@ function LockIcon() {
 
 const PHASES = {
   idle: null,
-  encrypting: "Encrypting vote via Arcium MPC...",
-  submitting: "Broadcasting to Solana...",
+  encrypting: "Encrypting vote payload...",
+  awaitingWallet: "Awaiting wallet approval...",
+  submitting: "Broadcasting signed transaction...",
   mpc: "MPC nodes computing encrypted state...",
   done: "Vote recorded. Distribution hidden until resolution.",
 };
@@ -47,6 +48,7 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
   const [submitting, setSubmitting] = useState(false);
   const [phase, setPhase] = useState("idle");
   const [error, setError] = useState("");
+  const [txSignature, setTxSignature] = useState("");
 
   const handleSubmit = async () => {
     if (!wallet || !publicKey) {
@@ -61,6 +63,7 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
     }
 
     setError("");
+    setTxSignature("");
     setSubmitting(true);
     setPhase("encrypting");
 
@@ -82,7 +85,7 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
         voterCipherPubkeyLength: voterCipherPubkey?.length,
       });
 
-      setPhase("submitting");
+      setPhase("awaitingWallet");
 
       const provider = new AnchorProvider(connection, wallet, {
         commitment: "confirmed",
@@ -111,7 +114,7 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
         },
       });
 
-      await program.methods
+      const signature = await program.methods
         .placeVote(
           computationOffset,
           nonce,
@@ -133,7 +136,10 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
         })
         .rpc({ commitment: "confirmed" });
 
+      setTxSignature(signature);
+      setPhase("submitting");
       console.log("[PlaceBetModal] rpc:submitted", {
+        signature,
         computationOffset: computationOffset.toString(),
       });
 
@@ -147,10 +153,22 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
         console.warn("[PlaceBetModal] computation:warning", awaitError);
       }
       setPhase("done");
-      setTimeout(() => onSuccess(), 1400);
+      setTimeout(() => onSuccess?.({ signature, computationOffset: computationOffset.toString() }), 1400);
     } catch (caught) {
       console.error("[PlaceBetModal] submit:error", caught);
-      setError(caught?.message || "Transaction failed");
+      const message = caught?.message || "Transaction failed";
+      const lowered = message.toLowerCase();
+      if (
+        lowered.includes("user rejected") ||
+        lowered.includes("user declined") ||
+        lowered.includes("walletsigntransactionerror") ||
+        lowered.includes("cancelled") ||
+        lowered.includes("canceled")
+      ) {
+        setError("Transaction canceled before signing");
+      } else {
+        setError(message);
+      }
       setPhase("idle");
     } finally {
       setSubmitting(false);
@@ -388,6 +406,23 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
           </div>
         )}
 
+        {txSignature && (
+          <div
+            style={{
+              marginBottom: 12,
+              padding: "9px 12px",
+              background: "var(--bg-input)",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              fontSize: 11,
+              color: "var(--text-2)",
+              wordBreak: "break-all",
+            }}
+          >
+            TX: {txSignature}
+          </div>
+        )}
+
         <div style={{ borderLeft: "2px solid var(--border-hover)", paddingLeft: 10, marginBottom: 14 }}>
           <p style={{ fontSize: 10, color: "var(--text-3)", lineHeight: 1.6 }}>
             Vote encrypted with x25519 + RescueCipher client-side. Nobody sees the odds until this market resolves.
@@ -422,3 +457,4 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
     </div>
   );
 }
+
