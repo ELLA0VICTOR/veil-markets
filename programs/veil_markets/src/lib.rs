@@ -4,7 +4,7 @@ use arcium_anchor::prelude::*;
 use arcium_client::idl::arcium::types::{CallbackAccount, CircuitSource, OffChainCircuitSource};
 use arcium_macros::*;
 
-declare_id!("6Yzx9fKe52tqhKmV81rTmDGH4hXFgiPKU9T5TgPezemR");
+declare_id!("CcVVkss7EtMLDpgcC9CMZbz7VadGRqEUTcLgdHeUKdHF");
 
 const COMP_DEF_OFFSET_INIT_MARKET_STATE: u32 = comp_def_offset("init_market_state");
 const COMP_DEF_OFFSET_ADD_VOTE: u32 = comp_def_offset("add_vote");

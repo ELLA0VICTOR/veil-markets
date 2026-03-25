@@ -1,5 +1,5 @@
 export const PROGRAM_ID =
-  import.meta.env.VITE_PROGRAM_ID || "6Yzx9fKe52tqhKmV81rTmDGH4hXFgiPKU9T5TgPezemR";
+  import.meta.env.VITE_PROGRAM_ID || "CcVVkss7EtMLDpgcC9CMZbz7VadGRqEUTcLgdHeUKdHF";
 export const CLUSTER_OFFSET = 456;
 export const RPC_ENDPOINT =
   import.meta.env.VITE_RPC_ENDPOINT || "https://api.devnet.solana.com";
