@@ -11,7 +11,11 @@ import {
   isZeroConditionId,
   fetchPolymarketMarket,
 } from "../../utils/polymarket";
-import { archiveMarket, isMarketArchived } from "../../utils/archivedMarkets";
+import {
+  hideMarketFromDashboard,
+  isMarketHidden,
+  showMarketOnDashboard,
+} from "../../utils/archivedMarkets";
 import { decryptStoredVote } from "../../utils/arcium";
 import { getCircuitAccounts, getMxePublicKeyWithRetry, waitForArciumComputation } from "../../utils/arciumAccounts";
 import { usePrivateBalance } from "../../hooks/usePrivateBalance";
@@ -117,7 +121,7 @@ export default function MarketDetail({ marketPubkey }) {
   const [showBet, setShowBet] = useState(false);
   const [position, setPosition] = useState(null);
   const [decryptedPosition, setDecryptedPosition] = useState(null);
-  const [archived, setArchived] = useState(false);
+  const [hiddenFromDashboard, setHiddenFromDashboard] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [claimError, setClaimError] = useState("");
   const [balanceInput, setBalanceInput] = useState("1");
@@ -198,7 +202,7 @@ export default function MarketDetail({ marketPubkey }) {
         }
       }
 
-      setArchived(isMarketArchived(pubkey.toBase58()));
+      setHiddenFromDashboard(isMarketHidden(pubkey.toBase58()));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -223,11 +227,15 @@ export default function MarketDetail({ marketPubkey }) {
     fetchMarket();
   }, [fetchMarket]);
 
-  const handleArchive = () => {
+  const handleToggleDashboardVisibility = () => {
     if (!market) return;
-    archiveMarket(market.publicKey);
-    setArchived(true);
-    navigate("#/");
+    if (hiddenFromDashboard) {
+      showMarketOnDashboard(market.publicKey);
+      setHiddenFromDashboard(false);
+      return;
+    }
+    hideMarketFromDashboard(market.publicKey);
+    setHiddenFromDashboard(true);
   };
 
   const handleClaim = async () => {
@@ -320,7 +328,7 @@ export default function MarketDetail({ marketPubkey }) {
 
   const pastEnd = hasCrossedEnd || Date.now() >= market.endTime.getTime();
   const canBet = market.status === 1 && !pastEnd && (!position || position.status === 3);
-  const canArchive = publicKey && market.creator === publicKey.toBase58();
+  const canHideFromDashboard = Boolean(market);
   const canClaim =
     market.status === 3 &&
     market.resultPublished &&
@@ -360,7 +368,7 @@ export default function MarketDetail({ marketPubkey }) {
         }}
       >
         <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 14 }}>
-          <StatusBadge status={market.status} />
+          <StatusBadge status={market.status} ended={pastEnd && market.status === 1} />
           <OracleTag isPolymarket={market.isPolymarket} />
           {market.polymarketCategory && (
             <span className="pill" style={{ background: "transparent", color: "var(--text-3)", border: "1px solid var(--border)", fontSize: 9 }}>
@@ -373,14 +381,14 @@ export default function MarketDetail({ marketPubkey }) {
           {market.question}
         </h1>
 
-        {canArchive && !archived && (
+        {canHideFromDashboard && (
           <div style={{ marginBottom: 18 }}>
             <button
-              onClick={handleArchive}
+              onClick={handleToggleDashboardVisibility}
               style={{
-                background: "var(--red-dim)",
-                color: "var(--red)",
-                border: "1px solid var(--red-border)",
+                background: hiddenFromDashboard ? "var(--bg-input)" : "transparent",
+                color: hiddenFromDashboard ? "var(--text)" : "var(--text-2)",
+                border: "1px solid var(--border)",
                 borderRadius: 9,
                 padding: "9px 14px",
                 fontFamily: "var(--font-mono)",
@@ -390,8 +398,11 @@ export default function MarketDetail({ marketPubkey }) {
                 cursor: "pointer",
               }}
             >
-              ARCHIVE MARKET
+              {hiddenFromDashboard ? "SHOW ON DASHBOARD" : "HIDE FROM DASHBOARD"}
             </button>
+            <p style={{ marginTop: 8, fontSize: 11, color: "var(--text-3)" }}>
+              This only changes your local dashboard view. The market stays on-chain and reachable by direct link.
+            </p>
           </div>
         )}
 
@@ -401,6 +412,25 @@ export default function MarketDetail({ marketPubkey }) {
           <Stat label={pastEnd ? "ENDED" : "CLOSES"} value={<CountdownTimer endTime={market.endTime} onExpired={handleMarketExpired} />} />
         </div>
       </div>
+
+      {pastEnd && market.status < 3 && (
+        <div
+          style={{
+            background: "var(--amber-dim)",
+            border: "1px solid var(--amber-border)",
+            borderRadius: 12,
+            padding: "14px 16px",
+            marginBottom: 12,
+          }}
+        >
+          <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "var(--amber)", marginBottom: 6 }}>
+            MARKET WAITING ON RESOLUTION
+          </p>
+          <p style={{ fontSize: 12, color: "var(--text-2)" }}>
+            Betting is closed. This market will stay in the global &quot;Awaiting Resolution&quot; section until the creator publishes the outcome.
+          </p>
+        </div>
+      )}
 
       <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 18px", marginBottom: 12 }}>
         <p style={{ fontSize: 9, color: "var(--text-3)", letterSpacing: "0.12em", marginBottom: 9 }}>PRIVATE VEIL BALANCE</p>

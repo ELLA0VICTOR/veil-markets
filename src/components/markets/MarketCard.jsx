@@ -5,7 +5,10 @@ import OracleTag from "../ui/OracleTag";
 
 export default function MarketCard({ market, index }) {
   const settled = market.status === 3;
-  const open    = market.status === 1;
+  const pastEnd = Date.now() >= market.endTime.getTime();
+  const open = market.status === 1 && !pastEnd;
+  const awaitingResolution = !settled && (market.status === 2 || pastEnd);
+  const hidden = market.isHidden;
 
   return (
     <article
@@ -38,7 +41,7 @@ export default function MarketCard({ market, index }) {
       >
         {/* Top row */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-          <StatusBadge status={market.status} />
+          <StatusBadge status={market.status} ended={awaitingResolution && market.status === 1} />
           <OracleTag isPolymarket={market.isPolymarket} />
         </div>
 
@@ -62,7 +65,10 @@ export default function MarketCard({ market, index }) {
         <div className="market-card-stats" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           {[
             { label: "POOL", value: "PRIVATE", color: "var(--text)" },
-            { label: open || market.status === 0 ? "ENDS" : "ENDED", value: <CountdownTimer endTime={market.endTime} /> },
+            {
+              label: open || market.status === 0 ? "ENDS" : "ENDED",
+              value: <CountdownTimer endTime={market.endTime} />,
+            },
           ].map(({ label, value, color }) => (
             <div key={label} style={{ background: "var(--bg-input)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 10px" }}>
               <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", letterSpacing: "0.1em", marginBottom: 4 }}>{label}</p>
@@ -76,7 +82,20 @@ export default function MarketCard({ market, index }) {
           <span style={{ fontSize: 11, color: "var(--text-3)" }}>
             {market.voteCount} {market.voteCount === 1 ? "bet" : "bets"}
           </span>
-          {settled && market.resultPublished ? (
+          {hidden ? (
+            <span
+              className="pill"
+              style={{
+                background: "var(--bg-input)",
+                color: "var(--text-3)",
+                border: "1px solid var(--border)",
+                fontSize: 9,
+                fontWeight: 700,
+              }}
+            >
+              HIDDEN
+            </span>
+          ) : settled && market.resultPublished ? (
             <span className="pill" style={{
               background: market.yesWins ? "var(--cyan-dim)" : "var(--red-dim)",
               color:      market.yesWins ? "var(--cyan)"    : "var(--red)",
@@ -84,6 +103,17 @@ export default function MarketCard({ market, index }) {
               fontSize: 9, fontWeight: 700,
             }}>
               {market.yesWins ? "YES WON" : "NO WON"}
+            </span>
+          ) : awaitingResolution ? (
+            <span
+              style={{
+                fontSize: 9,
+                color: "var(--amber)",
+                fontFamily: "var(--font-mono)",
+                letterSpacing: "0.08em",
+              }}
+            >
+              AWAITING RESOLUTION
             </span>
           ) : market.polymarketCategory ? (
             <span style={{ fontSize: 9, color: "var(--text-3)", fontFamily: "var(--font-mono)", letterSpacing: "0.08em" }}>

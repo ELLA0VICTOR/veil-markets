@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useMemo, useState } from "react";
 import { useMarkets } from "../../hooks/useMarkets";
 import { usePolymarketFeed } from "../../hooks/usePolymarketFeed";
 import MarketCard from "./MarketCard";
@@ -58,7 +58,14 @@ function ImportablePolymarketCard({ market, index, onImport }) {
           >
             POLYMARKET
           </span>
-          <span style={{ fontSize: 9, color: "var(--text-3)", fontFamily: "var(--font-mono)", letterSpacing: "0.08em" }}>
+          <span
+            style={{
+              fontSize: 9,
+              color: "var(--text-3)",
+              fontFamily: "var(--font-mono)",
+              letterSpacing: "0.08em",
+            }}
+          >
             {market.category}
           </span>
         </div>
@@ -121,7 +128,51 @@ function ImportablePolymarketCard({ market, index, onImport }) {
   );
 }
 
-const TABS = ["ALL", "LIVE", "SETTLED"];
+const TAB_META = {
+  LIVE: {
+    label: "LIVE",
+    description: "Markets that are still open for private betting.",
+    emptyTitle: "No live markets right now",
+    emptyBody: "Create one or switch to Discover to import a fresh Polymarket market into VEIL.",
+  },
+  DISCOVER: {
+    label: "DISCOVER",
+    description: "Fresh Polymarket ideas that have not been imported into VEIL yet.",
+    emptyTitle: "Nothing new to import right now",
+    emptyBody: "You are caught up with the current Polymarket feed for this session.",
+  },
+  AWAITING: {
+    label: "AWAITING RESOLUTION",
+    description: "Markets that already ended and are waiting for settlement or the creator's resolution.",
+    emptyTitle: "No markets are waiting for resolution",
+    emptyBody: "Ended markets will move here automatically until they settle.",
+  },
+  HISTORY: {
+    label: "HISTORY",
+    description: "Settled markets stay on-chain and live here instead of crowding the active feed.",
+    emptyTitle: "No settled markets yet",
+    emptyBody: "Resolved markets will move into History automatically.",
+  },
+  HIDDEN: {
+    label: "HIDDEN",
+    description: "Markets hidden only in this browser. You can still open them and show them on your dashboard again.",
+    emptyTitle: "No hidden markets",
+    emptyBody: "Use “Hide from dashboard” inside a market when you want to tidy your personal view.",
+  },
+};
+
+function sortLiveMarkets(a, b) {
+  if (b.voteCount !== a.voteCount) return b.voteCount - a.voteCount;
+  return a.endTime.getTime() - b.endTime.getTime();
+}
+
+function sortAwaitingMarkets(a, b) {
+  return a.endTime.getTime() - b.endTime.getTime();
+}
+
+function sortHistoryMarkets(a, b) {
+  return b.endTime.getTime() - a.endTime.getTime();
+}
 
 export default function MarketList() {
   const { markets, loading, error, refetch } = useMarkets();
@@ -134,25 +185,88 @@ export default function MarketList() {
   const [createTab, setCreateTab] = useState("custom");
   const [selectedImportMarket, setSelectedImportMarket] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState("ALL");
+  const [tab, setTab] = useState("LIVE");
   const [flashMessage, setFlashMessage] = useState("");
 
-  const filtered = markets.filter((market) => {
-    if (tab === "LIVE") return market.status === 1;
-    if (tab === "SETTLED") return market.status === 3;
-    return true;
-  });
-
-  const importedConditionIds = new Set(
-    markets
-      .filter((market) => market.isPolymarket && market.conditionId)
-      .map((market) => market.conditionId)
+  const importedConditionIds = useMemo(
+    () =>
+      new Set(
+        markets
+          .filter((market) => market.isPolymarket && market.conditionId)
+          .map((market) => market.conditionId)
+      ),
+    [markets]
   );
 
-  const importablePolymarkets =
-    tab === "ALL"
-      ? polymarketFeed.filter((market) => !importedConditionIds.has(market.conditionId))
-      : [];
+  const importablePolymarkets = useMemo(
+    () => polymarketFeed.filter((market) => !importedConditionIds.has(market.conditionId)),
+    [importedConditionIds, polymarketFeed]
+  );
+
+  const liveMarkets = useMemo(
+    () =>
+      markets
+        .filter((market) => !market.isHidden && market.lifecycle === "live")
+        .sort(sortLiveMarkets),
+    [markets]
+  );
+
+  const awaitingResolutionMarkets = useMemo(
+    () =>
+      markets
+        .filter((market) => !market.isHidden && market.lifecycle === "awaiting-resolution")
+        .sort(sortAwaitingMarkets),
+    [markets]
+  );
+
+  const historyMarkets = useMemo(
+    () =>
+      markets
+        .filter((market) => !market.isHidden && market.lifecycle === "history")
+        .sort(sortHistoryMarkets),
+    [markets]
+  );
+
+  const hiddenMarkets = useMemo(
+    () => markets.filter((market) => market.isHidden).sort(sortHistoryMarkets),
+    [markets]
+  );
+
+  const tabConfig = useMemo(
+    () => [
+      { id: "LIVE", count: liveMarkets.length },
+      { id: "DISCOVER", count: importablePolymarkets.length },
+      { id: "AWAITING", count: awaitingResolutionMarkets.length },
+      { id: "HISTORY", count: historyMarkets.length },
+      { id: "HIDDEN", count: hiddenMarkets.length },
+    ],
+    [awaitingResolutionMarkets.length, hiddenMarkets.length, historyMarkets.length, importablePolymarkets.length, liveMarkets.length]
+  );
+
+  const visibleMarkets = liveMarkets.length + awaitingResolutionMarkets.length + historyMarkets.length;
+  const activeMeta = TAB_META[tab];
+
+  let displayedMarkets = [];
+  let showImportables = false;
+
+  switch (tab) {
+    case "DISCOVER":
+      showImportables = true;
+      break;
+    case "AWAITING":
+      displayedMarkets = awaitingResolutionMarkets;
+      break;
+    case "HISTORY":
+      displayedMarkets = historyMarkets;
+      break;
+    case "HIDDEN":
+      displayedMarkets = hiddenMarkets;
+      break;
+    case "LIVE":
+    default:
+      displayedMarkets = liveMarkets;
+      break;
+  }
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -195,7 +309,7 @@ export default function MarketList() {
               Prediction Markets
             </h1>
             <p style={{ fontSize: 12, color: "var(--text-2)" }}>
-              Private Solana markets with live Polymarket imports and encrypted vote flow until settlement
+              Private Solana markets with automatic lifecycle buckets for live, awaiting resolution, and settled history.
             </p>
           </div>
 
@@ -232,9 +346,10 @@ export default function MarketList() {
         {!loading && markets.length > 0 && (
           <div className="market-list-stats" style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
             {[
-              { k: "Markets", v: markets.length },
-              { k: "Stake", v: "Private" },
-              { k: "Open", v: markets.filter((market) => market.status === 1).length },
+              { k: "Visible", v: visibleMarkets },
+              { k: "Live", v: liveMarkets.length },
+              { k: "Awaiting", v: awaitingResolutionMarkets.length },
+              { k: hiddenMarkets.length > 0 ? "Hidden" : "History", v: hiddenMarkets.length > 0 ? hiddenMarkets.length : historyMarkets.length },
             ].map(({ k, v }) => (
               <div
                 key={k}
@@ -256,29 +371,58 @@ export default function MarketList() {
         )}
       </div>
 
-      <div className="market-tabs" style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid var(--border)", paddingBottom: 0 }}>
-        {TABS.map((tabName) => (
+      <div className="market-tabs" style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid var(--border)", paddingBottom: 0, flexWrap: "wrap" }}>
+        {tabConfig.map(({ id, count }) => (
           <button
-            key={tabName}
-            onClick={() => setTab(tabName)}
+            key={id}
+            onClick={() => setTab(id)}
             style={{
               background: "none",
               border: "none",
-              borderBottom: `2px solid ${tab === tabName ? "var(--text)" : "transparent"}`,
+              borderBottom: `2px solid ${tab === id ? "var(--text)" : "transparent"}`,
               padding: "10px 16px",
               fontFamily: "var(--font-mono)",
               fontSize: 11,
-              fontWeight: tab === tabName ? 700 : 500,
+              fontWeight: tab === id ? 700 : 500,
               letterSpacing: "0.08em",
-              color: tab === tabName ? "var(--text)" : "var(--text-3)",
+              color: tab === id ? "var(--text)" : "var(--text-3)",
               cursor: "pointer",
               transition: "all 150ms ease",
               marginBottom: -1,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
             }}
           >
-            {tabName}
+            <span>{TAB_META[id].label}</span>
+            <span
+              style={{
+                border: "1px solid var(--border)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                fontSize: 10,
+                color: tab === id ? "var(--text)" : "var(--text-3)",
+              }}
+            >
+              {count}
+            </span>
           </button>
         ))}
+      </div>
+
+      <div
+        style={{
+          marginBottom: 18,
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderRadius: 10,
+          padding: "12px 14px",
+        }}
+      >
+        <p style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-3)", letterSpacing: "0.1em", marginBottom: 5 }}>
+          {activeMeta.label}
+        </p>
+        <p style={{ fontSize: 12, color: "var(--text-2)" }}>{activeMeta.description}</p>
       </div>
 
       {flashMessage && (
@@ -342,36 +486,49 @@ export default function MarketList() {
         </div>
       )}
 
-      {!loading && !error && filtered.length === 0 && importablePolymarkets.length === 0 && (
+      {tab === "DISCOVER" && polymarketLoading && !loading && importablePolymarkets.length === 0 && (
+        <div
+          style={{
+            marginBottom: 18,
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            borderRadius: 10,
+            padding: "12px 16px",
+            color: "var(--text-2)",
+            fontSize: 12,
+          }}
+        >
+          Loading fresh Polymarket ideas...
+        </div>
+      )}
+
+      {!loading && !error && displayedMarkets.length === 0 && (!showImportables || importablePolymarkets.length === 0) && (
         <div className="anim-in" style={{ textAlign: "center", padding: "64px 24px" }}>
           <p style={{ fontFamily: "var(--font-sans)", fontSize: 16, color: "var(--text-2)", marginBottom: 8 }}>
-            No {tab !== "ALL" ? tab.toLowerCase() : "importable"} markets yet
+            {activeMeta.emptyTitle}
           </p>
-          <p style={{ fontSize: 12, color: "var(--text-3)" }}>
-            {tab === "ALL"
-              ? "Browse Polymarket markets here and import the ones you want on VEIL"
-              : "Switch to ALL to browse markets you can import from Polymarket"}
-          </p>
+          <p style={{ fontSize: 12, color: "var(--text-3)" }}>{activeMeta.emptyBody}</p>
         </div>
       )}
 
-      {!loading && !error && (filtered.length > 0 || importablePolymarkets.length > 0) && (
+      {!loading && !error && (displayedMarkets.length > 0 || (showImportables && importablePolymarkets.length > 0)) && (
         <div className="market-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 12 }}>
-          {filtered.map((market, index) => (
+          {displayedMarkets.map((market, index) => (
             <MarketCard key={market.publicKey} market={market} index={index} />
           ))}
-          {importablePolymarkets.map((market, index) => (
-            <ImportablePolymarketCard
-              key={market.conditionId}
-              market={market}
-              index={filtered.length + index}
-              onImport={handleOpenPolymarketImport}
-            />
-          ))}
+          {showImportables &&
+            importablePolymarkets.map((market, index) => (
+              <ImportablePolymarketCard
+                key={market.conditionId}
+                market={market}
+                index={displayedMarkets.length + index}
+                onImport={handleOpenPolymarketImport}
+              />
+            ))}
         </div>
       )}
 
-      {tab === "ALL" && polymarketError && (
+      {tab === "DISCOVER" && polymarketError && (
         <div
           style={{
             marginTop: 24,

@@ -4,10 +4,20 @@ import { AnchorProvider } from "@coral-xyz/anchor";
 import { useAnchorWallet } from "@solana/wallet-adapter-react";
 import { decodeQuestion } from "../utils/solana";
 import { bytesToConditionId, isZeroConditionId, fetchPolymarketMarket } from "../utils/polymarket";
-import { getArchivedMarketIds } from "../utils/archivedMarkets";
+import { getHiddenMarketIds } from "../utils/archivedMarkets";
 import { createReadonlyProvider, createVeilProgram, fetchAllDecodableAccounts } from "../utils/program";
 
 const POLL_INTERVAL = 15_000;
+
+function getMarketLifecycle(status, endTime) {
+  const endMs = endTime.getTime();
+  const hasEnded = Date.now() >= endMs;
+
+  if (status === 3) return "history";
+  if (status === 2) return "awaiting-resolution";
+  if (hasEnded) return "awaiting-resolution";
+  return "live";
+}
 
 export function useMarkets() {
   const { connection } = useConnection();
@@ -70,12 +80,17 @@ export function useMarkets() {
         })
       );
 
-      const archivedIds = new Set(getArchivedMarketIds());
+      const hiddenIds = new Set(getHiddenMarketIds());
       const validMarkets = enriched
         .filter((r) => r.status === "fulfilled")
         .map((r) => r.value)
-        .filter((market) => !archivedIds.has(market.publicKey))
+        .map((market) => ({
+          ...market,
+          lifecycle: getMarketLifecycle(market.status, market.endTime),
+          isHidden: hiddenIds.has(market.publicKey),
+        }))
         .sort((a, b) => {
+          if (a.isHidden !== b.isHidden) return a.isHidden ? 1 : -1;
           if (b.voteCount !== a.voteCount) return b.voteCount - a.voteCount;
           return a.endTime.getTime() - b.endTime.getTime();
         });
@@ -96,13 +111,16 @@ export function useMarkets() {
   }, [fetchMarkets]);
 
   useEffect(() => {
-    const handleArchiveUpdate = () => {
+    const handleHiddenUpdate = () => {
       fetchMarkets();
     };
 
-    window.addEventListener("veil:archived-markets-updated", handleArchiveUpdate);
-    return () =>
-      window.removeEventListener("veil:archived-markets-updated", handleArchiveUpdate);
+    window.addEventListener("veil:hidden-markets-updated", handleHiddenUpdate);
+    window.addEventListener("veil:archived-markets-updated", handleHiddenUpdate);
+    return () => {
+      window.removeEventListener("veil:hidden-markets-updated", handleHiddenUpdate);
+      window.removeEventListener("veil:archived-markets-updated", handleHiddenUpdate);
+    };
   }, [fetchMarkets]);
 
   return { markets, loading, error, refetch: fetchMarkets };
