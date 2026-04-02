@@ -1,6 +1,6 @@
 import { Buffer } from "buffer";
 import { PublicKey } from "@solana/web3.js";
-import { MARKET_SEED, VAULT_SEED, POSITION_SEED } from "./constants.js";
+import { MARKET_SEED, POSITION_SEED, TREASURY_SEED, USER_BALANCE_SEED } from "./constants.js";
 import { getProgramId } from "./program.js";
 
 /**
@@ -22,17 +22,6 @@ export function deriveMarketPda(creatorPubkey, computationOffset) {
 }
 
 /**
- * Derive vault PDA for a market
- * seeds: [b"vault", market.key()]
- */
-export function deriveVaultPda(marketPubkey) {
-  return PublicKey.findProgramAddressSync(
-    [Buffer.from(VAULT_SEED), new PublicKey(marketPubkey).toBuffer()],
-    getProgramId()
-  );
-}
-
-/**
  * Derive position PDA for a (voter, market) pair
  * seeds: [b"position", market.key(), voter.key()]
  */
@@ -45,6 +34,17 @@ export function derivePositionPda(marketPubkey, voterPubkey) {
     ],
     getProgramId()
   );
+}
+
+export function deriveUserBalancePda(ownerPubkey) {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from(USER_BALANCE_SEED), new PublicKey(ownerPubkey).toBuffer()],
+    getProgramId()
+  );
+}
+
+export function deriveTreasuryPda() {
+  return PublicKey.findProgramAddressSync([Buffer.from(TREASURY_SEED)], getProgramId());
 }
 
 /**

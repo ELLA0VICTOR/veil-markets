@@ -1,5 +1,5 @@
 export const PROGRAM_ID =
-  import.meta.env.VITE_PROGRAM_ID || "CcVVkss7EtMLDpgcC9CMZbz7VadGRqEUTcLgdHeUKdHF";
+  import.meta.env.VITE_PROGRAM_ID || "Hq6Jyd8FjALKcdQoReCdsoyi51DW3dWHyGHVA2vWhU8z";
 export const CLUSTER_OFFSET = 456;
 export const RPC_ENDPOINT =
   import.meta.env.VITE_RPC_ENDPOINT || "https://api.devnet.solana.com";
@@ -13,9 +13,12 @@ export const ARCIUM_API_BASE = (
 export const MIN_BET_SOL = 0.01;
 export const DEFAULT_INITIAL_POOL_SOL = 0;
 export const MARKET_SEED = "market";
-export const VAULT_SEED = "vault";
 export const POSITION_SEED = "position";
+export const USER_BALANCE_SEED = "user_balance";
+export const USER_BALANCE_PENDING_SEED = "user_balance_pending";
+export const TREASURY_SEED = "treasury";
 export const ARCIUM_PROGRAM_ID = "Arcj82pX7HxYKLR92qvgZUAd7vGS1k4hQvAFcPATFdEQ";
+export const BALANCE_PENDING_STALE_SLOT_TTL = 600;
 
 export function withApiBase(base, path) {
   if (!base) return path;

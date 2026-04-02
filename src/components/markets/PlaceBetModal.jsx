@@ -1,15 +1,17 @@
-import { useState } from "react";
 import { Buffer } from "buffer";
+import { useState } from "react";
 import { useConnection } from "@solana/wallet-adapter-react";
 import { useAnchorWallet } from "@solana/wallet-adapter-react";
 import { AnchorProvider, BN } from "@coral-xyz/anchor";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
-import { PROGRAM_ID, ARCIUM_PROGRAM_ID, MIN_BET_SOL } from "../../utils/constants";
+import { ARCIUM_PROGRAM_ID, MIN_BET_SOL } from "../../utils/constants";
+import { encryptVoteWithPrivateKey } from "../../utils/arcium";
+import { getCircuitAccounts } from "../../utils/arciumAccounts";
+import { createVeilProgram } from "../../utils/program";
 import { solToLamports } from "../../utils/solana";
 import { useArcium } from "../../hooks/useArcium";
+import { usePrivateBalance } from "../../hooks/usePrivateBalance";
 import { useWallet } from "../../hooks/useWallet";
-import { getCircuitAccounts } from "../../utils/arciumAccounts";
-import { createVeilProgram, getProgramId } from "../../utils/program";
 
 function XIcon() {
   return (
@@ -30,18 +32,45 @@ function LockIcon() {
 
 const PHASES = {
   idle: null,
-  encrypting: "Encrypting vote payload...",
+  preparing: "Preparing your private balance context...",
+  encrypting: "Encrypting hidden vote and stake...",
   awaitingWallet: "Awaiting wallet approval...",
   submitting: "Broadcasting signed transaction...",
-  mpc: "MPC nodes computing encrypted state...",
-  done: "Vote recorded. Distribution hidden until resolution.",
+  mpc: "MPC nodes updating market state and your private balance...",
+  done: "Private bet recorded.",
 };
+
+function randomComputationOffset() {
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return new BN(new DataView(bytes.buffer).getBigUint64(0, true).toString());
+}
+
+function randomNonceBn() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  const value = Array.from(bytes).reduce(
+    (acc, byte, index) => acc | (BigInt(byte) << BigInt(index * 8)),
+    0n
+  );
+  return new BN(value.toString());
+}
 
 export default function PlaceBetModal({ market, onClose, onSuccess }) {
   const { connection } = useConnection();
   const wallet = useAnchorWallet();
-  const { publicKey, balance } = useWallet();
-  const { encryptVoteForSubmission, awaitComputation } = useArcium();
+  const { publicKey } = useWallet();
+  const { getMxePublicKey, awaitComputation } = useArcium();
+  const {
+    keypair,
+    balanceSol,
+    balanceLamports,
+    balanceDisplay,
+    error: privateBalanceError,
+    ensureInitialized,
+    userBalancePda,
+    userBalancePendingPda,
+    refreshBalance,
+  } =
+    usePrivateBalance();
 
   const [isYes, setIsYes] = useState(true);
   const [amount, setAmount] = useState(String(MIN_BET_SOL));
@@ -62,28 +91,45 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
       return;
     }
 
+    if (privateBalanceError) {
+      setError(privateBalanceError);
+      return;
+    }
+
+    if (balanceLamports !== null && BigInt(solToLamports(sol)) > balanceLamports) {
+      setError("Not enough private balance. Deposit to your VEIL balance first.");
+      return;
+    }
+
     setError("");
     setTxSignature("");
     setSubmitting(true);
-    setPhase("encrypting");
+    setPhase("preparing");
 
     try {
-      const lamports = solToLamports(sol);
-      console.log("[PlaceBetModal] submit:start", {
-        market: market?.publicKey,
-        isYes,
-        sol,
-        lamports,
-        wallet: publicKey?.toBase58?.(),
-      });
-      const { ciphertexts, nonce, publicKey: voterCipherPubkey } =
-        await encryptVoteForSubmission(isYes, lamports);
+      const initialized = await ensureInitialized();
+      if (!keypair || !userBalancePda || !userBalancePendingPda) {
+        throw new Error("Private balance keys are not ready yet");
+      }
 
-      console.log("[PlaceBetModal] encrypt:done", {
-        nonce: nonce?.toString?.() ?? nonce,
-        ciphertextCount: ciphertexts?.length,
-        voterCipherPubkeyLength: voterCipherPubkey?.length,
-      });
+      if (
+        initialized?.lamports !== undefined &&
+        initialized?.lamports !== null &&
+        BigInt(initialized.lamports.toString()) < BigInt(solToLamports(sol))
+      ) {
+        throw new Error("Not enough private balance. Deposit to your VEIL balance first.");
+      }
+
+      const lamports = solToLamports(sol);
+      const mxePublicKey = await getMxePublicKey();
+
+      setPhase("encrypting");
+      const vote = await encryptVoteWithPrivateKey(
+        isYes,
+        lamports,
+        mxePublicKey,
+        keypair.privateKey
+      );
 
       setPhase("awaitingWallet");
 
@@ -91,46 +137,30 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
         commitment: "confirmed",
       });
       const program = createVeilProgram(provider);
-      const randomOffsetBytes = crypto.getRandomValues(new Uint8Array(8));
-      const computationOffset = new BN(
-        new DataView(randomOffsetBytes.buffer).getBigUint64(0, true).toString()
-      );
+      const computationOffset = randomComputationOffset();
+      const viewerNonce = randomNonceBn();
       const marketPubkey = new PublicKey(market.publicKey);
-      const [vault] = PublicKey.findProgramAddressSync(
-        [Buffer.from("vault"), marketPubkey.toBuffer()],
-        getProgramId()
-      );
       const [position] = PublicKey.findProgramAddressSync(
         [Buffer.from("position"), marketPubkey.toBuffer(), publicKey.toBuffer()],
-        getProgramId()
+        program.programId
       );
-
-      console.log("[PlaceBetModal] accounts", {
-        market: marketPubkey.toBase58(),
-        vault: vault.toBase58(),
-        position: position.toBase58(),
-        circuitAccounts: {
-          ...getCircuitAccounts("add_vote", computationOffset),
-        },
-      });
 
       const signature = await program.methods
         .placeVote(
           computationOffset,
-          nonce,
-          Array.from(ciphertexts[0]),
-          Array.from(ciphertexts[1]),
-          voterCipherPubkey,
-          new BN(lamports),
-          isYes
+          viewerNonce,
+          new BN(vote.nonce.toString()),
+          Array.from(vote.ciphertexts[0]),
+          Array.from(vote.ciphertexts[1]),
+          vote.publicKey
         )
         .accounts({
           voter: publicKey,
           market: marketPubkey,
-          vault,
+          userBalance: userBalancePda,
+          pendingState: userBalancePendingPda,
           position,
           ...getCircuitAccounts("add_vote", computationOffset),
-          addVoteCallbackProgram: new PublicKey(PROGRAM_ID),
           arciumProgram: new PublicKey(ARCIUM_PROGRAM_ID),
           systemProgram: SystemProgram.programId,
         })
@@ -138,22 +168,12 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
 
       setTxSignature(signature);
       setPhase("submitting");
-      console.log("[PlaceBetModal] rpc:submitted", {
-        signature,
-        computationOffset: computationOffset.toString(),
-      });
 
       setPhase("mpc");
-      try {
-        await awaitComputation(computationOffset);
-        console.log("[PlaceBetModal] computation:done", {
-          computationOffset: computationOffset.toString(),
-        });
-      } catch (awaitError) {
-        console.warn("[PlaceBetModal] computation:warning", awaitError);
-      }
+      await awaitComputation(computationOffset);
+      await refreshBalance();
       setPhase("done");
-      setTimeout(() => onSuccess?.({ signature, computationOffset: computationOffset.toString() }), 1400);
+      setTimeout(() => onSuccess?.({ signature, computationOffset: computationOffset.toString() }), 1200);
     } catch (caught) {
       console.error("[PlaceBetModal] submit:error", caught);
       const message = caught?.message || "Transaction failed";
@@ -177,11 +197,6 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
 
   const active = submitting || phase === "mpc";
   const done = phase === "done";
-
-  const applyBalancePercent = (percent) => {
-    if (!balance) return;
-    setAmount(((balance * percent) / 100).toFixed(3));
-  };
 
   return (
     <div
@@ -217,7 +232,7 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
               fontSize: 9,
             }}
           >
-            <LockIcon /> E2E ENCRYPTED
+            <LockIcon /> PRIVATE BALANCE
           </span>
         </div>
         <button
@@ -230,18 +245,45 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
             borderRadius: 6,
             transition: "color 150ms",
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = "var(--text)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = "var(--text-3)";
-          }}
         >
           <XIcon />
         </button>
       </div>
 
       <div style={{ padding: "18px" }}>
+        <p style={{ fontSize: 9, color: "var(--text-3)", letterSpacing: "0.12em", marginBottom: 8 }}>
+          YOUR PRIVATE BALANCE
+        </p>
+        <div
+          style={{
+            padding: "10px 12px",
+            borderRadius: 9,
+            background: "var(--bg-input)",
+            border: "1px solid var(--border)",
+            marginBottom: 16,
+            fontFamily: "var(--font-mono)",
+            fontSize: 13,
+            color: "var(--text-2)",
+          }}
+        >
+          {balanceDisplay}
+        </div>
+        {privateBalanceError && (
+          <div
+            style={{
+              padding: "9px 12px",
+              background: "var(--red-dim)",
+              border: "1px solid var(--red-border)",
+              borderRadius: 8,
+              fontSize: 11,
+              color: "var(--red)",
+              marginBottom: 16,
+            }}
+          >
+            {privateBalanceError}
+          </div>
+        )}
+
         <p style={{ fontSize: 9, color: "var(--text-3)", letterSpacing: "0.12em", marginBottom: 8 }}>
           YOUR PREDICTION
         </p>
@@ -276,43 +318,6 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
           AMOUNT
         </p>
 
-        <div className="place-bet-shortcuts" style={{ display: "flex", gap: 5, marginBottom: 8 }}>
-          {[
-            [25, "25%"],
-            [50, "50%"],
-            [75, "75%"],
-            [100, "Max"],
-          ].map(([percent, label]) => (
-            <button
-              key={percent}
-              onClick={() => applyBalancePercent(percent)}
-              style={{
-                flex: 1,
-                padding: "5px 0",
-                background: "var(--bg-input)",
-                border: "1px solid var(--border)",
-                borderRadius: 6,
-                fontFamily: "var(--font-mono)",
-                fontSize: 11,
-                fontWeight: 600,
-                color: "var(--text-2)",
-                cursor: "pointer",
-                transition: "all 140ms ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "var(--border-hover)";
-                e.currentTarget.style.color = "var(--text)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "var(--border)";
-                e.currentTarget.style.color = "var(--text-2)";
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
         <div style={{ position: "relative", marginBottom: 4 }}>
           <input
             type="number"
@@ -332,13 +337,6 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
               fontSize: 17,
               fontWeight: 600,
               outline: "none",
-              transition: "border-color 150ms",
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = "var(--border-focus)";
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = "var(--border)";
             }}
           />
           <span
@@ -426,7 +424,7 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
 
         <div style={{ borderLeft: "2px solid var(--border-hover)", paddingLeft: 10, marginBottom: 14 }}>
           <p style={{ fontSize: 10, color: "var(--text-3)", lineHeight: 1.6 }}>
-            Vote encrypted with x25519 + RescueCipher client-side. Nobody sees the odds until this market resolves.
+            Your stake is now spent from an encrypted VEIL balance, not by sending a public market-specific SOL transfer.
           </p>
         </div>
 
@@ -445,17 +443,15 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
             letterSpacing: "0.07em",
             color: active || done ? "var(--text-3)" : "var(--bg)",
             cursor: active || done ? "not-allowed" : "pointer",
-            transition: "all 150ms ease",
           }}
         >
           {active
             ? "PROCESSING..."
             : done
-              ? "VOTE RECORDED"
+              ? "PRIVATE BET RECORDED"
               : `BET ${isYes ? "YES" : "NO"} · ${amount} SOL`}
         </button>
       </div>
     </div>
   );
 }
-

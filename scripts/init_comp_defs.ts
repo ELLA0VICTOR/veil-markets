@@ -2,7 +2,7 @@
  * init_comp_defs.ts
  *
  * Run once after deploying the veil_markets program to initialize the
- * three computation definition accounts on-chain.
+ * all computation definition accounts on-chain.
  */
 
 import * as anchor from "@coral-xyz/anchor";
@@ -33,8 +33,12 @@ async function initCompDef(
 
   const instructionMap: Record<CircuitName, string> = {
     init_market_state: "initInitMarketStateCompDef",
+    init_user_balance: "initInitUserBalanceCompDef",
+    deposit_balance: "initDepositBalanceCompDef",
+    withdraw_balance: "initWithdrawBalanceCompDef",
     add_vote: "initAddVoteCompDef",
     resolve_market: "initResolveMarketCompDef",
+    claim_payout: "initClaimPayoutCompDef",
   };
 
   const methodName = instructionMap[circuitName];
@@ -72,8 +76,12 @@ async function main() {
   console.log(`Cluster offset: ${CLUSTER_OFFSET}\n`);
 
   await initCompDef(provider, program, payer, "init_market_state");
+  await initCompDef(provider, program, payer, "init_user_balance");
+  await initCompDef(provider, program, payer, "deposit_balance");
+  await initCompDef(provider, program, payer, "withdraw_balance");
   await initCompDef(provider, program, payer, "add_vote");
   await initCompDef(provider, program, payer, "resolve_market");
+  await initCompDef(provider, program, payer, "claim_payout");
 
   console.log("=== All computation definitions initialized. ===");
   console.log("You can now create markets and place bets.");

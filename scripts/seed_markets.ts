@@ -96,11 +96,6 @@ async function main() {
       program.programId
     );
 
-    const [vaultPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("vault"), marketPda.toBuffer()],
-      program.programId
-    );
-
     const arciumAccounts = getComputationAccounts(
       program.programId,
       "init_market_state",
@@ -120,9 +115,7 @@ async function main() {
         .accounts({
           creator: payer.publicKey,
           market: marketPda,
-          vault: vaultPda,
           ...arciumAccounts,
-          createMarketCallbackProgram: program.programId,
           arciumProgram: ARCIUM_PROGRAM_ID,
           systemProgram: anchor.web3.SystemProgram.programId,
         })

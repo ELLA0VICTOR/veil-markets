@@ -4,12 +4,11 @@ import { useConnection } from "@solana/wallet-adapter-react";
 import { useAnchorWallet } from "@solana/wallet-adapter-react";
 import { AnchorProvider, BN } from "@coral-xyz/anchor";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
-import { PROGRAM_ID, ARCIUM_PROGRAM_ID, DEFAULT_INITIAL_POOL_SOL } from "../../utils/constants";
+import { ARCIUM_PROGRAM_ID } from "../../utils/constants";
 import { conditionIdToBytes } from "../../utils/polymarket";
 import { useWallet } from "../../hooks/useWallet";
 import { getCircuitAccounts, waitForArciumComputation } from "../../utils/arciumAccounts";
-import { createVeilProgram, getProgramId } from "../../utils/program";
-import { solToLamports } from "../../utils/solana";
+import { createVeilProgram } from "../../utils/program";
 import PolymarketBrowser from "./PolymarketBrowser";
 
 function XIcon() {
@@ -68,7 +67,6 @@ export default function CreateMarketModal({
   const [tab, setTab] = useState(initialTab);
   const [question, setQuestion] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [sol, setSol] = useState(String(DEFAULT_INITIAL_POOL_SOL));
   const [selectedPM, setSelectedPM] = useState(initialSelectedPM);
   const [sub, setSub] = useState(false);
   const [status, setStatus] = useState("");
@@ -101,13 +99,6 @@ export default function CreateMarketModal({
         throw new Error("End time must be in the future");
       }
 
-      const solAmt = sol.trim() === "" ? 0 : parseFloat(sol);
-      if (Number.isNaN(solAmt) || solAmt < 0) {
-        throw new Error("Creator seed must be 0 or more");
-      }
-
-      const initialPoolLamports = solToLamports(String(solAmt));
-
       const qBytes = new Uint8Array(280);
       qBytes.set(new TextEncoder().encode(q.slice(0, 280)));
 
@@ -118,14 +109,11 @@ export default function CreateMarketModal({
 
       const off = crypto.getRandomValues(new Uint8Array(8));
       const cOff = new BN(new DataView(off.buffer).getBigUint64(0, true).toString());
-      const [mPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("market"), publicKey.toBuffer(), cOff.toArrayLike(Buffer, "le", 8)],
-        getProgramId()
-      );
-      const [vPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("vault"), mPda.toBuffer()],
-        getProgramId()
-      );
+      const [mPda] = PublicKey.findProgramAddressSync([
+        Buffer.from("market"),
+        publicKey.toBuffer(),
+        cOff.toArrayLike(Buffer, "le", 8),
+      ], program.programId);
 
       setStatus("Submitting...");
 
@@ -134,16 +122,14 @@ export default function CreateMarketModal({
           cOff,
           Array.from(qBytes),
           new BN(ts),
-          new BN(initialPoolLamports.toString()),
+          new BN(0),
           isPoly,
           cid
         )
         .accounts({
           creator: publicKey,
           market: mPda,
-          vault: vPda,
           ...getCircuitAccounts("init_market_state", cOff),
-          createMarketCallbackProgram: new PublicKey(PROGRAM_ID),
           arciumProgram: new PublicKey(ARCIUM_PROGRAM_ID),
           systemProgram: SystemProgram.programId,
         })
@@ -292,20 +278,9 @@ export default function CreateMarketModal({
                   onBlur={onBlur_}
                 />
               </div>
-              <div>
-                <Label>OPTIONAL CREATOR SEED (SOL)</Label>
-                <input
-                  type="number"
-                  value={sol}
-                  onChange={(e) => setSol(e.target.value)}
-                  min={0}
-                  step="0.01"
-                  style={{ ...inputSt, fontSize: 16, fontWeight: 700 }}
-                  onFocus={onFocus}
-                  onBlur={onBlur_}
-                />
-                <p style={{ marginTop: 7, fontSize: 11, color: "var(--text-3)", lineHeight: 1.45 }}>
-                  Defaults to `0`. Winners split the live pool from bets unless you choose to seed extra SOL here.
+              <div style={{ padding: "11px 12px", borderRadius: 10, background: "var(--bg-input)", border: "1px solid var(--border)" }}>
+                <p style={{ fontSize: 11, color: "var(--text-2)", lineHeight: 1.5 }}>
+                  Private mode is enabled. Markets now start without a public seed so stake size is not exposed by a market-specific funding transfer.
                 </p>
               </div>
             </>
@@ -313,20 +288,9 @@ export default function CreateMarketModal({
             <>
               <PolymarketBrowser selected={selectedPM} onSelect={setSelectedPM} />
               {selectedPM && (
-                <div>
-                  <Label>OPTIONAL CREATOR SEED (SOL)</Label>
-                  <input
-                    type="number"
-                    value={sol}
-                    onChange={(e) => setSol(e.target.value)}
-                    min={0}
-                    step="0.01"
-                    style={{ ...inputSt, fontSize: 16, fontWeight: 700 }}
-                    onFocus={onFocus}
-                    onBlur={onBlur_}
-                  />
-                  <p style={{ marginTop: 7, fontSize: 11, color: "var(--text-3)", lineHeight: 1.45 }}>
-                    Imported markets can start at `0`. Add seed liquidity only if you want to boost the total pool.
+                <div style={{ padding: "11px 12px", borderRadius: 10, background: "var(--bg-input)", border: "1px solid var(--border)" }}>
+                  <p style={{ fontSize: 11, color: "var(--text-2)", lineHeight: 1.5 }}>
+                    Imported private markets also start with no public seed. Users fund a shared private balance first, then bet from that balance.
                   </p>
                 </div>
               )}

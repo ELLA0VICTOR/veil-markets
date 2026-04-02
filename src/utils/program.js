@@ -32,3 +32,21 @@ export function createVeilProgram(provider) {
     provider
   );
 }
+
+export async function fetchAllDecodableAccounts(program, accountName, commitment = "confirmed") {
+  const rawAccounts = await program.provider.connection.getProgramAccounts(program.programId, {
+    commitment,
+  });
+
+  const decoded = [];
+  for (const { pubkey, account } of rawAccounts) {
+    try {
+      const parsed = program.coder.accounts.decode(accountName, account.data);
+      decoded.push({ publicKey: pubkey, account: parsed });
+    } catch {
+      // Skip legacy or unrelated accounts that no longer match the active IDL.
+    }
+  }
+
+  return decoded;
+}

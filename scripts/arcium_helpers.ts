@@ -25,10 +25,25 @@ export const ARCIUM_PROGRAM_ID = new PublicKey(
   "Arcj82pX7HxYKLR92qvgZUAd7vGS1k4hQvAFcPATFdEQ"
 );
 
-export type CircuitName = "init_market_state" | "add_vote" | "resolve_market";
+export type CircuitName =
+  | "init_market_state"
+  | "init_user_balance"
+  | "deposit_balance"
+  | "withdraw_balance"
+  | "add_vote"
+  | "resolve_market"
+  | "claim_payout";
+
+const CIRCUIT_NAME_ALIASES: Partial<Record<CircuitName, string>> = {
+  resolve_market: "resolve_market_v2",
+};
+
+function resolveCircuitName(circuitName: CircuitName): string {
+  return CIRCUIT_NAME_ALIASES[circuitName] ?? circuitName;
+}
 
 export function getCompDefOffset(circuitName: CircuitName): number {
-  return Buffer.from(getCompDefAccOffset(circuitName)).readUInt32LE(0);
+  return Buffer.from(getCompDefAccOffset(resolveCircuitName(circuitName))).readUInt32LE(0);
 }
 
 export async function getInitCompDefAccounts(
@@ -114,3 +129,4 @@ export async function waitForComputation(
     commitment
   );
 }
+

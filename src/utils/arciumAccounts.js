@@ -5,11 +5,6 @@ import { ARCIUM_API_BASE, ARCIUM_PROGRAM_ID, CLUSTER_OFFSET, withApiBase } from 
 import { getProgramId } from "./program.js";
 
 const OFFSET_BUFFER_SIZE = 4;
-const COMP_DEF_OFFSETS = {
-  init_market_state: 749427652,
-  add_vote: 1483301163,
-  resolve_market: 484556922,
-};
 
 const SEEDS = {
   computation: "ComputationAccount",
@@ -19,6 +14,20 @@ const SEEDS = {
   mxe: "MXEAccount",
   compDef: "ComputationDefinitionAccount",
 };
+
+// Keep browser-side circuit offsets local so the frontend does not need to
+// import the full `@arcium-hq/client` package just to derive comp-def PDAs.
+const COMP_DEF_OFFSETS = {
+  init_market_state: 749427652,
+  init_user_balance: 3690557688,
+  deposit_balance: 2044512493,
+  withdraw_balance: 2134253957,
+  add_vote: 1483301163,
+  resolve_market: 2116189289,
+  claim_payout: 1381326356,
+};
+
+const MXE_PUBLIC_KEY_CACHE = new Map();
 
 function arciumProgramId() {
   return new PublicKey(ARCIUM_PROGRAM_ID);
@@ -101,6 +110,7 @@ export async function getMxePublicKeyWithRetry(
   { maxRetries = 20, retryDelayMs = 1500 } = {}
 ) {
   const programId = getProgramId();
+  const cacheKey = programId.toBase58();
 
   for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
     try {
@@ -113,7 +123,10 @@ export async function getMxePublicKeyWithRetry(
       if (response.ok) {
         const body = await response.json();
         const key = Array.isArray(body?.key) ? Uint8Array.from(body.key) : null;
-        if (key) return key;
+        if (key) {
+          MXE_PUBLIC_KEY_CACHE.set(cacheKey, key);
+          return key;
+        }
       } else if (response.status !== 404) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body?.message || body?.error || `MXE key request failed (${response.status})`);
@@ -123,6 +136,11 @@ export async function getMxePublicKeyWithRetry(
     }
 
     await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+  }
+
+  const cachedKey = MXE_PUBLIC_KEY_CACHE.get(cacheKey);
+  if (cachedKey) {
+    return cachedKey;
   }
 
   throw new Error(
@@ -161,3 +179,4 @@ export async function waitForArciumComputation(
   const body = await response.json();
   return body?.result ?? null;
 }
+

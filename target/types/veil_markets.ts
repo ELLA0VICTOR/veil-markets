@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/veil_markets.json`.
  */
 export type VeilMarkets = {
-  "address": "CcVVkss7EtMLDpgcC9CMZbz7VadGRqEUTcLgdHeUKdHF",
+  "address": "Hq6Jyd8FjALKcdQoReCdsoyi51DW3dWHyGHVA2vWhU8z",
   "metadata": {
     "name": "veilMarkets",
     "version": "0.1.0",
@@ -47,6 +47,52 @@ export type VeilMarkets = {
         {
           "name": "market",
           "writable": true
+        },
+        {
+          "name": "userBalance",
+          "writable": true
+        },
+        {
+          "name": "pendingState",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101,
+                  95,
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user_balance.owner",
+                "account": "userBalance"
+              }
+            ]
+          }
+        },
+        {
+          "name": "position",
+          "writable": true
         }
       ],
       "args": [
@@ -61,6 +107,106 @@ export type VeilMarkets = {
                   "type": {
                     "defined": {
                       "name": "addVoteOutput"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "claimPayoutCallback",
+      "discriminator": [
+        62,
+        187,
+        84,
+        24,
+        151,
+        9,
+        17,
+        138
+      ],
+      "accounts": [
+        {
+          "name": "arciumProgram",
+          "address": "Arcj82pX7HxYKLR92qvgZUAd7vGS1k4hQvAFcPATFdEQ"
+        },
+        {
+          "name": "compDefAccount"
+        },
+        {
+          "name": "mxeAccount"
+        },
+        {
+          "name": "computationAccount"
+        },
+        {
+          "name": "clusterAccount"
+        },
+        {
+          "name": "instructionsSysvar"
+        },
+        {
+          "name": "userBalance",
+          "writable": true
+        },
+        {
+          "name": "pendingState",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101,
+                  95,
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user_balance.owner",
+                "account": "userBalance"
+              }
+            ]
+          }
+        },
+        {
+          "name": "position",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "output",
+          "type": {
+            "defined": {
+              "name": "signedComputationOutputs",
+              "generics": [
+                {
+                  "kind": "type",
+                  "type": {
+                    "defined": {
+                      "name": "claimPayoutOutput"
                     }
                   }
                 }
@@ -93,23 +239,67 @@ export type VeilMarkets = {
           "writable": true
         },
         {
-          "name": "vault",
+          "name": "userBalance",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
-                  118,
-                  97,
                   117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  98,
+                  97,
                   108,
-                  116
+                  97,
+                  110,
+                  99,
+                  101
                 ]
               },
               {
                 "kind": "account",
-                "path": "market"
+                "path": "voter"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pendingState",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101,
+                  95,
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "voter"
               }
             ]
           }
@@ -144,11 +334,88 @@ export type VeilMarkets = {
           }
         },
         {
+          "name": "mxeAccount"
+        },
+        {
+          "name": "signPdaAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  65,
+                  114,
+                  99,
+                  105,
+                  117,
+                  109,
+                  83,
+                  105,
+                  103,
+                  110,
+                  101,
+                  114,
+                  65,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mempoolAccount",
+          "writable": true
+        },
+        {
+          "name": "executingPool",
+          "writable": true
+        },
+        {
+          "name": "compDefAccount"
+        },
+        {
+          "name": "computationAccount",
+          "writable": true
+        },
+        {
+          "name": "clusterAccount",
+          "writable": true
+        },
+        {
+          "name": "poolAccount",
+          "writable": true,
+          "address": "G2sRWJvi3xoyh5k2gY49eG9L8YhAEWQPtNb1zb1GXTtC"
+        },
+        {
+          "name": "clockAccount",
+          "writable": true,
+          "address": "7EbMUTLo5DjdzbN7s8BXeZwXzEwNQb1hScfRvWg8a6ot"
+        },
+        {
+          "name": "arciumProgram",
+          "address": "Arcj82pX7HxYKLR92qvgZUAd7vGS1k4hQvAFcPATFdEQ"
+        },
+        {
           "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "computationOffset",
+          "type": "u64"
+        },
+        {
+          "name": "viewerNonce",
+          "type": "u128"
+        }
+      ]
     },
     {
       "name": "createMarket",
@@ -191,28 +458,6 @@ export type VeilMarkets = {
               {
                 "kind": "arg",
                 "path": "computationOffset"
-              }
-            ]
-          }
-        },
-        {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "market"
               }
             ]
           }
@@ -328,6 +573,295 @@ export type VeilMarkets = {
       ]
     },
     {
+      "name": "depositBalance",
+      "discriminator": [
+        126,
+        124,
+        133,
+        139,
+        113,
+        62,
+        17,
+        176
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "userBalance",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pendingState",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101,
+                  95,
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mxeAccount"
+        },
+        {
+          "name": "signPdaAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  65,
+                  114,
+                  99,
+                  105,
+                  117,
+                  109,
+                  83,
+                  105,
+                  103,
+                  110,
+                  101,
+                  114,
+                  65,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mempoolAccount",
+          "writable": true
+        },
+        {
+          "name": "executingPool",
+          "writable": true
+        },
+        {
+          "name": "compDefAccount"
+        },
+        {
+          "name": "computationAccount",
+          "writable": true
+        },
+        {
+          "name": "clusterAccount",
+          "writable": true
+        },
+        {
+          "name": "poolAccount",
+          "writable": true,
+          "address": "G2sRWJvi3xoyh5k2gY49eG9L8YhAEWQPtNb1zb1GXTtC"
+        },
+        {
+          "name": "clockAccount",
+          "writable": true,
+          "address": "7EbMUTLo5DjdzbN7s8BXeZwXzEwNQb1hScfRvWg8a6ot"
+        },
+        {
+          "name": "arciumProgram",
+          "address": "Arcj82pX7HxYKLR92qvgZUAd7vGS1k4hQvAFcPATFdEQ"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "computationOffset",
+          "type": "u64"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "viewerNonce",
+          "type": "u128"
+        }
+      ]
+    },
+    {
+      "name": "depositBalanceCallback",
+      "discriminator": [
+        109,
+        174,
+        227,
+        191,
+        137,
+        123,
+        27,
+        186
+      ],
+      "accounts": [
+        {
+          "name": "arciumProgram",
+          "address": "Arcj82pX7HxYKLR92qvgZUAd7vGS1k4hQvAFcPATFdEQ"
+        },
+        {
+          "name": "compDefAccount"
+        },
+        {
+          "name": "mxeAccount"
+        },
+        {
+          "name": "computationAccount"
+        },
+        {
+          "name": "clusterAccount"
+        },
+        {
+          "name": "instructionsSysvar"
+        },
+        {
+          "name": "userBalance",
+          "writable": true
+        },
+        {
+          "name": "pendingState",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101,
+                  95,
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user_balance.owner",
+                "account": "userBalance"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "output",
+          "type": {
+            "defined": {
+              "name": "signedComputationOutputs",
+              "generics": [
+                {
+                  "kind": "type",
+                  "type": {
+                    "defined": {
+                      "name": "depositBalanceOutput"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "initAddVoteCompDef",
       "discriminator": [
         105,
@@ -372,6 +906,94 @@ export type VeilMarkets = {
       "args": []
     },
     {
+      "name": "initClaimPayoutCompDef",
+      "discriminator": [
+        30,
+        107,
+        212,
+        73,
+        136,
+        55,
+        137,
+        211
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "mxeAccount",
+          "writable": true
+        },
+        {
+          "name": "compDefAccount",
+          "writable": true
+        },
+        {
+          "name": "addressLookupTable",
+          "writable": true
+        },
+        {
+          "name": "lutProgram"
+        },
+        {
+          "name": "arciumProgram",
+          "address": "Arcj82pX7HxYKLR92qvgZUAd7vGS1k4hQvAFcPATFdEQ"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initDepositBalanceCompDef",
+      "discriminator": [
+        221,
+        69,
+        125,
+        1,
+        222,
+        170,
+        18,
+        165
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "mxeAccount",
+          "writable": true
+        },
+        {
+          "name": "compDefAccount",
+          "writable": true
+        },
+        {
+          "name": "addressLookupTable",
+          "writable": true
+        },
+        {
+          "name": "lutProgram"
+        },
+        {
+          "name": "arciumProgram",
+          "address": "Arcj82pX7HxYKLR92qvgZUAd7vGS1k4hQvAFcPATFdEQ"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initInitMarketStateCompDef",
       "discriminator": [
         108,
@@ -382,6 +1004,50 @@ export type VeilMarkets = {
         180,
         16,
         22
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "mxeAccount",
+          "writable": true
+        },
+        {
+          "name": "compDefAccount",
+          "writable": true
+        },
+        {
+          "name": "addressLookupTable",
+          "writable": true
+        },
+        {
+          "name": "lutProgram"
+        },
+        {
+          "name": "arciumProgram",
+          "address": "Arcj82pX7HxYKLR92qvgZUAd7vGS1k4hQvAFcPATFdEQ"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initInitUserBalanceCompDef",
+      "discriminator": [
+        32,
+        237,
+        168,
+        20,
+        224,
+        227,
+        225,
+        247
       ],
       "accounts": [
         {
@@ -518,6 +1184,323 @@ export type VeilMarkets = {
       "args": []
     },
     {
+      "name": "initUserBalance",
+      "discriminator": [
+        5,
+        126,
+        136,
+        248,
+        253,
+        80,
+        93,
+        163
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "userBalance",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pendingState",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101,
+                  95,
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mxeAccount"
+        },
+        {
+          "name": "signPdaAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  65,
+                  114,
+                  99,
+                  105,
+                  117,
+                  109,
+                  83,
+                  105,
+                  103,
+                  110,
+                  101,
+                  114,
+                  65,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mempoolAccount",
+          "writable": true
+        },
+        {
+          "name": "executingPool",
+          "writable": true
+        },
+        {
+          "name": "compDefAccount"
+        },
+        {
+          "name": "computationAccount",
+          "writable": true
+        },
+        {
+          "name": "clusterAccount",
+          "writable": true
+        },
+        {
+          "name": "poolAccount",
+          "writable": true,
+          "address": "G2sRWJvi3xoyh5k2gY49eG9L8YhAEWQPtNb1zb1GXTtC"
+        },
+        {
+          "name": "clockAccount",
+          "writable": true,
+          "address": "7EbMUTLo5DjdzbN7s8BXeZwXzEwNQb1hScfRvWg8a6ot"
+        },
+        {
+          "name": "arciumProgram",
+          "address": "Arcj82pX7HxYKLR92qvgZUAd7vGS1k4hQvAFcPATFdEQ"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "computationOffset",
+          "type": "u64"
+        },
+        {
+          "name": "viewerPubkey",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "viewerNonce",
+          "type": "u128"
+        }
+      ]
+    },
+    {
+      "name": "initUserBalanceCallback",
+      "discriminator": [
+        222,
+        99,
+        206,
+        186,
+        82,
+        175,
+        223,
+        252
+      ],
+      "accounts": [
+        {
+          "name": "arciumProgram",
+          "address": "Arcj82pX7HxYKLR92qvgZUAd7vGS1k4hQvAFcPATFdEQ"
+        },
+        {
+          "name": "compDefAccount"
+        },
+        {
+          "name": "mxeAccount"
+        },
+        {
+          "name": "computationAccount"
+        },
+        {
+          "name": "clusterAccount"
+        },
+        {
+          "name": "instructionsSysvar"
+        },
+        {
+          "name": "userBalance",
+          "writable": true
+        },
+        {
+          "name": "pendingState",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101,
+                  95,
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user_balance.owner",
+                "account": "userBalance"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "output",
+          "type": {
+            "defined": {
+              "name": "signedComputationOutputs",
+              "generics": [
+                {
+                  "kind": "type",
+                  "type": {
+                    "defined": {
+                      "name": "initUserBalanceOutput"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "initWithdrawBalanceCompDef",
+      "discriminator": [
+        159,
+        232,
+        55,
+        228,
+        156,
+        184,
+        197,
+        198
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "mxeAccount",
+          "writable": true
+        },
+        {
+          "name": "compDefAccount",
+          "writable": true
+        },
+        {
+          "name": "addressLookupTable",
+          "writable": true
+        },
+        {
+          "name": "lutProgram"
+        },
+        {
+          "name": "arciumProgram",
+          "address": "Arcj82pX7HxYKLR92qvgZUAd7vGS1k4hQvAFcPATFdEQ"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "placeVote",
       "discriminator": [
         95,
@@ -540,23 +1523,67 @@ export type VeilMarkets = {
           "writable": true
         },
         {
-          "name": "vault",
+          "name": "userBalance",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
-                  118,
-                  97,
                   117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  98,
+                  97,
                   108,
-                  116
+                  97,
+                  110,
+                  99,
+                  101
                 ]
               },
               {
                 "kind": "account",
-                "path": "market"
+                "path": "voter"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pendingState",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101,
+                  95,
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "voter"
               }
             ]
           }
@@ -669,6 +1696,10 @@ export type VeilMarkets = {
           "type": "u64"
         },
         {
+          "name": "viewerNonce",
+          "type": "u128"
+        },
+        {
           "name": "voteNonce",
           "type": "u128"
         },
@@ -691,61 +1722,106 @@ export type VeilMarkets = {
           }
         },
         {
-          "name": "voterPubKey",
+          "name": "votePubKey",
           "type": {
             "array": [
               "u8",
               32
             ]
           }
-        },
-        {
-          "name": "stakeAmount",
-          "type": "u64"
-        },
-        {
-          "name": "isYesReveal",
-          "type": "bool"
         }
       ]
     },
     {
-      "name": "publishResult",
+      "name": "recoverStaleBalanceAction",
       "discriminator": [
-        82,
-        242,
-        179,
-        114,
-        16,
-        166,
-        232,
-        252
+        127,
+        235,
+        248,
+        216,
+        185,
+        130,
+        65,
+        140
       ],
       "accounts": [
         {
-          "name": "authority",
+          "name": "owner",
           "writable": true,
           "signer": true
         },
         {
-          "name": "market",
-          "writable": true
+          "name": "userBalance",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pendingState",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101,
+                  95,
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
       ],
-      "args": [
-        {
-          "name": "yesWins",
-          "type": "bool"
-        },
-        {
-          "name": "totalYesLamports",
-          "type": "u64"
-        },
-        {
-          "name": "totalNoLamports",
-          "type": "u64"
-        }
-      ]
+      "args": []
     },
     {
       "name": "resolveMarket",
@@ -848,31 +1924,22 @@ export type VeilMarkets = {
           "type": "u64"
         },
         {
-          "name": "resolverPubKey",
-          "type": {
-            "array": [
-              "u8",
-              32
-            ]
-          }
-        },
-        {
-          "name": "resolverNonce",
-          "type": "u128"
+          "name": "outcomeYes",
+          "type": "bool"
         }
       ]
     },
     {
-      "name": "resolveMarketCallback",
+      "name": "resolveMarketV2Callback",
       "discriminator": [
-        222,
-        135,
-        177,
-        148,
-        20,
-        212,
-        222,
-        58
+        247,
+        91,
+        10,
+        78,
+        31,
+        122,
+        84,
+        222
       ],
       "accounts": [
         {
@@ -910,7 +1977,325 @@ export type VeilMarkets = {
                   "kind": "type",
                   "type": {
                     "defined": {
-                      "name": "resolveMarketOutput"
+                      "name": "resolveMarketV2Output"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "withdrawBalance",
+      "discriminator": [
+        140,
+        79,
+        65,
+        53,
+        68,
+        73,
+        241,
+        211
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "userBalance",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pendingState",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101,
+                  95,
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mxeAccount"
+        },
+        {
+          "name": "signPdaAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  65,
+                  114,
+                  99,
+                  105,
+                  117,
+                  109,
+                  83,
+                  105,
+                  103,
+                  110,
+                  101,
+                  114,
+                  65,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mempoolAccount",
+          "writable": true
+        },
+        {
+          "name": "executingPool",
+          "writable": true
+        },
+        {
+          "name": "compDefAccount"
+        },
+        {
+          "name": "computationAccount",
+          "writable": true
+        },
+        {
+          "name": "clusterAccount",
+          "writable": true
+        },
+        {
+          "name": "poolAccount",
+          "writable": true,
+          "address": "G2sRWJvi3xoyh5k2gY49eG9L8YhAEWQPtNb1zb1GXTtC"
+        },
+        {
+          "name": "clockAccount",
+          "writable": true,
+          "address": "7EbMUTLo5DjdzbN7s8BXeZwXzEwNQb1hScfRvWg8a6ot"
+        },
+        {
+          "name": "arciumProgram",
+          "address": "Arcj82pX7HxYKLR92qvgZUAd7vGS1k4hQvAFcPATFdEQ"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "computationOffset",
+          "type": "u64"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "viewerNonce",
+          "type": "u128"
+        }
+      ]
+    },
+    {
+      "name": "withdrawBalanceCallback",
+      "discriminator": [
+        247,
+        137,
+        78,
+        79,
+        211,
+        238,
+        195,
+        233
+      ],
+      "accounts": [
+        {
+          "name": "arciumProgram",
+          "address": "Arcj82pX7HxYKLR92qvgZUAd7vGS1k4hQvAFcPATFdEQ"
+        },
+        {
+          "name": "compDefAccount"
+        },
+        {
+          "name": "mxeAccount"
+        },
+        {
+          "name": "computationAccount"
+        },
+        {
+          "name": "clusterAccount"
+        },
+        {
+          "name": "instructionsSysvar"
+        },
+        {
+          "name": "userBalance",
+          "writable": true
+        },
+        {
+          "name": "pendingState",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101,
+                  95,
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user_balance.owner",
+                "account": "userBalance"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true
+        },
+        {
+          "name": "treasury",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "output",
+          "type": {
+            "defined": {
+              "name": "signedComputationOutputs",
+              "generics": [
+                {
+                  "kind": "type",
+                  "type": {
+                    "defined": {
+                      "name": "withdrawBalanceOutput"
                     }
                   }
                 }
@@ -1025,6 +2410,32 @@ export type VeilMarkets = {
         247,
         208
       ]
+    },
+    {
+      "name": "userBalance",
+      "discriminator": [
+        187,
+        237,
+        208,
+        146,
+        86,
+        132,
+        29,
+        191
+      ]
+    },
+    {
+      "name": "userBalancePendingState",
+      "discriminator": [
+        44,
+        8,
+        46,
+        159,
+        145,
+        20,
+        236,
+        255
+      ]
     }
   ],
   "errors": [
@@ -1072,6 +2483,22 @@ export type VeilMarkets = {
             "name": "field0",
             "type": {
               "defined": {
+                "name": "addVoteOutputStruct0"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "addVoteOutputStruct0",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "field0",
+            "type": {
+              "defined": {
                 "name": "mxeEncryptedStruct",
                 "generics": [
                   {
@@ -1081,6 +2508,38 @@ export type VeilMarkets = {
                 ]
               }
             }
+          },
+          {
+            "name": "field1",
+            "type": {
+              "defined": {
+                "name": "mxeEncryptedStruct",
+                "generics": [
+                  {
+                    "kind": "const",
+                    "value": "1"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "field2",
+            "type": {
+              "defined": {
+                "name": "sharedEncryptedStruct",
+                "generics": [
+                  {
+                    "kind": "const",
+                    "value": "1"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "field3",
+            "type": "bool"
           }
         ]
       }
@@ -1145,6 +2604,62 @@ export type VeilMarkets = {
                 }
               }
             ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "claimPayoutOutput",
+      "docs": [
+        "The output of the callback instruction. Provided as a struct with ordered fields",
+        "as anchor does not support tuples and tuple structs yet."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "field0",
+            "type": {
+              "defined": {
+                "name": "claimPayoutOutputStruct0"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "claimPayoutOutputStruct0",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "field0",
+            "type": {
+              "defined": {
+                "name": "mxeEncryptedStruct",
+                "generics": [
+                  {
+                    "kind": "const",
+                    "value": "1"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "field1",
+            "type": {
+              "defined": {
+                "name": "sharedEncryptedStruct",
+                "generics": [
+                  {
+                    "kind": "const",
+                    "value": "1"
+                  }
+                ]
+              }
+            }
           }
         ]
       }
@@ -1383,6 +2898,62 @@ export type VeilMarkets = {
       }
     },
     {
+      "name": "depositBalanceOutput",
+      "docs": [
+        "The output of the callback instruction. Provided as a struct with ordered fields",
+        "as anchor does not support tuples and tuple structs yet."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "field0",
+            "type": {
+              "defined": {
+                "name": "depositBalanceOutputStruct0"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "depositBalanceOutputStruct0",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "field0",
+            "type": {
+              "defined": {
+                "name": "mxeEncryptedStruct",
+                "generics": [
+                  {
+                    "kind": "const",
+                    "value": "1"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "field1",
+            "type": {
+              "defined": {
+                "name": "sharedEncryptedStruct",
+                "generics": [
+                  {
+                    "kind": "const",
+                    "value": "1"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "epoch",
       "docs": [
         "The network epoch"
@@ -1424,6 +2995,62 @@ export type VeilMarkets = {
                   {
                     "kind": "const",
                     "value": "2"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "initUserBalanceOutput",
+      "docs": [
+        "The output of the callback instruction. Provided as a struct with ordered fields",
+        "as anchor does not support tuples and tuple structs yet."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "field0",
+            "type": {
+              "defined": {
+                "name": "initUserBalanceOutputStruct0"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "initUserBalanceOutputStruct0",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "field0",
+            "type": {
+              "defined": {
+                "name": "mxeEncryptedStruct",
+                "generics": [
+                  {
+                    "kind": "const",
+                    "value": "1"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "field1",
+            "type": {
+              "defined": {
+                "name": "sharedEncryptedStruct",
+                "generics": [
+                  {
+                    "kind": "const",
+                    "value": "1"
                   }
                 ]
               }
@@ -1599,10 +3226,6 @@ export type VeilMarkets = {
             }
           },
           {
-            "name": "totalSolPool",
-            "type": "u64"
-          },
-          {
             "name": "voteCount",
             "type": "u32"
           },
@@ -1629,20 +3252,11 @@ export type VeilMarkets = {
             }
           },
           {
-            "name": "resultEncryptionKey",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
-          },
-          {
-            "name": "resultNonce",
+            "name": "resolvedNonce",
             "type": "u128"
           },
           {
-            "name": "resultCtTotalYes",
+            "name": "resolvedCtTotalYes",
             "type": {
               "array": [
                 "u8",
@@ -1651,7 +3265,7 @@ export type VeilMarkets = {
             }
           },
           {
-            "name": "resultCtTotalNo",
+            "name": "resolvedCtTotalNo",
             "type": {
               "array": [
                 "u8",
@@ -1660,25 +3274,21 @@ export type VeilMarkets = {
             }
           },
           {
-            "name": "resultCtYesWins",
+            "name": "resolvedCtYesWins",
             "type": {
               "array": [
                 "u8",
                 32
               ]
             }
+          },
+          {
+            "name": "pendingYesWins",
+            "type": "bool"
           },
           {
             "name": "yesWins",
             "type": "bool"
-          },
-          {
-            "name": "plaintextTotalYes",
-            "type": "u64"
-          },
-          {
-            "name": "plaintextTotalNo",
-            "type": "u64"
           },
           {
             "name": "resultPublished",
@@ -1939,16 +3549,39 @@ export type VeilMarkets = {
             "type": "pubkey"
           },
           {
-            "name": "stake",
-            "type": "u64"
+            "name": "votePubkey",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
           },
           {
-            "name": "isYes",
-            "type": "bool"
+            "name": "voteNonce",
+            "type": "u128"
           },
           {
-            "name": "hasClaimed",
-            "type": "bool"
+            "name": "voteCtIsYes",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "voteCtStake",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "type": "u8"
           },
           {
             "name": "bump",
@@ -1958,7 +3591,7 @@ export type VeilMarkets = {
       }
     },
     {
-      "name": "resolveMarketOutput",
+      "name": "resolveMarketV2Output",
       "docs": [
         "The output of the callback instruction. Provided as a struct with ordered fields",
         "as anchor does not support tuples and tuple structs yet."
@@ -1970,7 +3603,7 @@ export type VeilMarkets = {
             "name": "field0",
             "type": {
               "defined": {
-                "name": "sharedEncryptedStruct",
+                "name": "mxeEncryptedStruct",
                 "generics": [
                   {
                     "kind": "const",
@@ -2117,6 +3750,102 @@ export type VeilMarkets = {
       }
     },
     {
+      "name": "userBalance",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "viewerPubkey",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "stateNonce",
+            "type": "u128"
+          },
+          {
+            "name": "stateCt",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "viewEncryptionKey",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "viewNonce",
+            "type": "u128"
+          },
+          {
+            "name": "viewCt",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "pendingAction",
+            "type": "u8"
+          },
+          {
+            "name": "pendingWithdrawLamports",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "userBalancePendingState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "userBalance",
+            "type": "pubkey"
+          },
+          {
+            "name": "computationAccount",
+            "type": "pubkey"
+          },
+          {
+            "name": "action",
+            "type": "u8"
+          },
+          {
+            "name": "startedAtSlot",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "utilityPubkeys",
       "type": {
         "kind": "struct",
@@ -2156,6 +3885,66 @@ export type VeilMarkets = {
                 64
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "withdrawBalanceOutput",
+      "docs": [
+        "The output of the callback instruction. Provided as a struct with ordered fields",
+        "as anchor does not support tuples and tuple structs yet."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "field0",
+            "type": {
+              "defined": {
+                "name": "withdrawBalanceOutputStruct0"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "withdrawBalanceOutputStruct0",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "field0",
+            "type": {
+              "defined": {
+                "name": "mxeEncryptedStruct",
+                "generics": [
+                  {
+                    "kind": "const",
+                    "value": "1"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "field1",
+            "type": {
+              "defined": {
+                "name": "sharedEncryptedStruct",
+                "generics": [
+                  {
+                    "kind": "const",
+                    "value": "1"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "field2",
+            "type": "bool"
           }
         ]
       }

@@ -7,7 +7,7 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-veil_markets = "CcVVkss7EtMLDpgcC9CMZbz7VadGRqEUTcLgdHeUKdHF"
+veil_markets = "Hq6Jyd8FjALKcdQoReCdsoyi51DW3dWHyGHVA2vWhU8z"
 
 [registry]
 url = "https://api.apr.dev"

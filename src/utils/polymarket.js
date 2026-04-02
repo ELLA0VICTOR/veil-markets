@@ -21,7 +21,8 @@ export async function fetchPolymarketMarkets(limit = 20, offset = 0) {
         return false;
       }
     })
-    .map(normalizePolymarket);
+    .map(normalizePolymarket)
+    .filter((m) => m.conditionId);
 }
 
 // Fetch a single market by conditionId
@@ -33,7 +34,11 @@ export async function fetchPolymarketMarket(conditionId) {
   const data = await res.json();
   const market = Array.isArray(data) ? data[0] : data;
   if (!market) throw new Error(`Market not found: ${conditionId}`);
-  return normalizePolymarket(market);
+  const normalized = normalizePolymarket(market);
+  if (!normalized.conditionId) {
+    throw new Error(`Market missing condition id: ${conditionId}`);
+  }
+  return normalized;
 }
 
 // Check resolution status of a Polymarket market
@@ -63,6 +68,9 @@ export async function checkPolymarketResolution(conditionId) {
 
 // Convert Polymarket conditionId "0xabc..." to [u8; 32] bytes array
 export function conditionIdToBytes(conditionId) {
+  if (!conditionId) {
+    return Array.from(new Uint8Array(32));
+  }
   const hex = conditionId.startsWith("0x")
     ? conditionId.slice(2)
     : conditionId;
@@ -91,14 +99,24 @@ export function isZeroConditionId(bytes) {
 
 // Normalize Polymarket API response to consistent shape
 function normalizePolymarket(m) {
+  const safeQuestion = typeof m.question === "string" && m.question.trim()
+    ? m.question
+    : "Untitled market";
+  const safeConditionId = typeof m.conditionId === "string" ? m.conditionId : null;
+  const parsedEndDate = m.endDate ? new Date(m.endDate) : null;
+  const safeEndDate =
+    parsedEndDate && !Number.isNaN(parsedEndDate.getTime())
+      ? parsedEndDate
+      : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
   return {
-    conditionId: m.conditionId,
-    question: m.question,
-    slug: m.slug,
-    endDate: new Date(m.endDate),
-    active: m.active,
-    closed: m.closed,
-    resolved: m.resolved,
+    conditionId: safeConditionId,
+    question: safeQuestion,
+    slug: m.slug || safeQuestion.toLowerCase().replace(/\s+/g, "-"),
+    endDate: safeEndDate,
+    active: Boolean(m.active),
+    closed: Boolean(m.closed),
+    resolved: Boolean(m.resolved),
     outcomes: JSON.parse(m.outcomes || '["Yes","No"]'),
     outcomePrices: m.outcomePrices,
     volume: parseFloat(m.volume || "0"),

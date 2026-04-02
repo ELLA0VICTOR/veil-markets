@@ -140,7 +140,7 @@ export default function MarketList() {
   const filtered = markets.filter((market) => {
     if (tab === "LIVE") return market.status === 1;
     if (tab === "SETTLED") return market.status === 3;
-    return false;
+    return true;
   });
 
   const importedConditionIds = new Set(
@@ -233,7 +233,7 @@ export default function MarketList() {
           <div className="market-list-stats" style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
             {[
               { k: "Markets", v: markets.length },
-              { k: "SOL Locked", v: `${markets.reduce((sum, market) => sum + market.totalSolPoolLamports / 1e9, 0).toFixed(2)} SOL` },
+              { k: "Stake", v: "Private" },
               { k: "Open", v: markets.filter((market) => market.status === 1).length },
             ].map(({ k, v }) => (
               <div

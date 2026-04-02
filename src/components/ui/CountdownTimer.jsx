@@ -1,13 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 const pad = (n) => String(n).padStart(2, "0");
 
 export default function CountdownTimer({ endTime, onExpired }) {
   const [diff, setDiff] = useState(0);
+  const didNotifyExpiredRef = useRef(false);
+
   useEffect(() => {
+    didNotifyExpiredRef.current = false;
     const tick = () => {
       const ms = new Date(endTime).getTime() - Date.now();
       setDiff(Math.max(0, ms));
-      if (ms <= 0 && onExpired) onExpired();
+      if (ms <= 0) {
+        if (onExpired && !didNotifyExpiredRef.current) {
+          didNotifyExpiredRef.current = true;
+          onExpired();
+        }
+        return;
+      }
+      didNotifyExpiredRef.current = false;
     };
     tick();
     const id = setInterval(tick, 1000);

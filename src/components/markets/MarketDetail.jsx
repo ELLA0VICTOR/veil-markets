@@ -1,18 +1,20 @@
-import { Suspense, lazy, useState, useEffect, useCallback } from "react";
-import { Buffer } from "buffer";
+import { Suspense, lazy, useEffect, useMemo, useState, useCallback } from "react";
 import { useConnection } from "@solana/wallet-adapter-react";
 import { useAnchorWallet } from "@solana/wallet-adapter-react";
-import { AnchorProvider } from "@coral-xyz/anchor";
+import { AnchorProvider, BN } from "@coral-xyz/anchor";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { navigate } from "../../utils/navigation";
-import { PROGRAM_ID } from "../../utils/constants";
-import { decodeQuestion, lamportsToSol } from "../../utils/solana";
+import { ARCIUM_PROGRAM_ID } from "../../utils/constants";
+import { decodeQuestion, derivePositionPda } from "../../utils/solana";
 import {
   bytesToConditionId,
   isZeroConditionId,
   fetchPolymarketMarket,
 } from "../../utils/polymarket";
 import { archiveMarket, isMarketArchived } from "../../utils/archivedMarkets";
+import { decryptStoredVote } from "../../utils/arcium";
+import { getCircuitAccounts, getMxePublicKeyWithRetry, waitForArciumComputation } from "../../utils/arciumAccounts";
+import { usePrivateBalance } from "../../hooks/usePrivateBalance";
 import { useWallet } from "../../hooks/useWallet";
 import { createReadonlyProvider, createVeilProgram } from "../../utils/program";
 import StatusBadge from "../ui/StatusBadge";
@@ -71,18 +73,57 @@ function Stat({ label, value, accent }) {
   );
 }
 
+function randomComputationOffset() {
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return new BN(new DataView(bytes.buffer).getBigUint64(0, true).toString());
+}
+
+function randomNonceBn() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  const value = Array.from(bytes).reduce(
+    (acc, byte, index) => acc | (BigInt(byte) << BigInt(index * 8)),
+    0n
+  );
+  return new BN(value.toString());
+}
+
 export default function MarketDetail({ marketPubkey }) {
   const { connection } = useConnection();
   const wallet = useAnchorWallet();
   const { publicKey } = useWallet();
+  const {
+    balanceSol,
+    balanceDisplay,
+    keypair,
+    error: privateBalanceError,
+    refreshBalance,
+    deposit,
+    withdraw,
+    userBalancePda,
+    userBalancePendingPda,
+    pendingActionLabel,
+    pendingMessage,
+    pendingWithdrawDisplay,
+    pendingAgeSlots,
+    pendingAssessment,
+    pendingRecoveryThresholdSlots,
+    canRecoverPendingAction,
+    isPending,
+    recoverPendingAction,
+  } = usePrivateBalance();
   const [market, setMarket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showBet, setShowBet] = useState(false);
   const [position, setPosition] = useState(null);
+  const [decryptedPosition, setDecryptedPosition] = useState(null);
   const [archived, setArchived] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [claimError, setClaimError] = useState("");
+  const [balanceInput, setBalanceInput] = useState("1");
+  const [hasCrossedEnd, setHasCrossedEnd] = useState(false);
+  const [balanceAction, setBalanceAction] = useState("");
+  const [balanceError, setBalanceError] = useState("");
 
   const fetchMarket = useCallback(async () => {
     try {
@@ -106,47 +147,54 @@ export default function MarketDetail({ marketPubkey }) {
         } catch {}
       }
 
+      const endTime = new Date(acct.endTime.toNumber() * 1000);
+      setHasCrossedEnd(Date.now() >= endTime.getTime());
       setMarket({
         publicKey: pubkey.toBase58(),
         creator: acct.creator.toBase58(),
         question: pmData?.question || decodeQuestion(acct.question),
-        endTime: new Date(acct.endTime.toNumber() * 1000),
+        endTime,
         status: acct.status,
         isPolymarket: isPoly,
         conditionId: isPoly ? bytesToConditionId(cidBytes) : null,
-        totalSolPool: lamportsToSol(acct.totalSolPool),
-        totalSolPoolLamports: acct.totalSolPool.toNumber(),
         voteCount: acct.voteCount,
         yesWins: acct.yesWins,
         resultPublished: acct.resultPublished,
-        plaintextTotalYes: acct.plaintextTotalYes?.toNumber(),
-        plaintextTotalNo: acct.plaintextTotalNo?.toNumber(),
-        stateNonce: acct.stateNonce,
-        stateCtYes: acct.stateCtYes,
-        stateCtNo: acct.stateCtNo,
-        resultEncryptionKey: acct.resultEncryptionKey,
-        resultNonce: acct.resultNonce,
-        resultCtTotalYes: acct.resultCtTotalYes,
-        resultCtTotalNo: acct.resultCtTotalNo,
-        resultCtYesWins: acct.resultCtYesWins,
         polymarketPrices: pmData?.outcomePrices || null,
         polymarketCategory: pmData?.category || null,
       });
 
       if (publicKey) {
         try {
-          const [pPda] = PublicKey.findProgramAddressSync(
-            [Buffer.from("position"), pubkey.toBuffer(), publicKey.toBuffer()],
-            new PublicKey(PROGRAM_ID)
-          );
-          const pos = await program.account.position.fetch(pPda);
+          const [positionPda] = derivePositionPda(pubkey, publicKey);
+          const pos = await program.account.position.fetch(positionPda);
           setPosition({
-            stake: lamportsToSol(pos.stake),
-            isYes: pos.isYes,
-            hasClaimed: pos.hasClaimed,
+            pda: positionPda.toBase58(),
+            status: pos.status,
+            voteNonce: pos.voteNonce,
+            voteCtIsYes: pos.voteCtIsYes,
+            voteCtStake: pos.voteCtStake,
           });
+
+          if (keypair) {
+            const mxePublicKey = await getMxePublicKeyWithRetry(provider);
+            const decoded = await decryptStoredVote(
+              keypair.privateKey,
+              mxePublicKey,
+              pos.voteNonce.toString(),
+              pos.voteCtIsYes,
+              pos.voteCtStake
+            );
+            setDecryptedPosition({
+              isYes: decoded.isYes,
+              stakeSol: Number(decoded.stakeLamports) / 1e9,
+            });
+          } else {
+            setDecryptedPosition(null);
+          }
         } catch {
           setPosition(null);
+          setDecryptedPosition(null);
         }
       }
 
@@ -156,9 +204,22 @@ export default function MarketDetail({ marketPubkey }) {
     } finally {
       setLoading(false);
     }
-  }, [connection, wallet, marketPubkey, publicKey]);
+  }, [connection, wallet, marketPubkey, publicKey, keypair]);
 
   useEffect(() => {
+    fetchMarket();
+  }, [fetchMarket]);
+
+  useEffect(() => {
+    if (!market || market.status >= 3) return undefined;
+    const id = setInterval(() => {
+      fetchMarket();
+    }, 15000);
+    return () => clearInterval(id);
+  }, [fetchMarket, market]);
+
+  const handleMarketExpired = useCallback(() => {
+    setHasCrossedEnd(true);
     fetchMarket();
   }, [fetchMarket]);
 
@@ -170,7 +231,7 @@ export default function MarketDetail({ marketPubkey }) {
   };
 
   const handleClaim = async () => {
-    if (!wallet || !publicKey || !market) {
+    if (!wallet || !publicKey || !market || !userBalancePda || !userBalancePendingPda) {
       setClaimError("Connect wallet first");
       return;
     }
@@ -182,26 +243,26 @@ export default function MarketDetail({ marketPubkey }) {
       const provider = new AnchorProvider(connection, wallet, { commitment: "confirmed" });
       const program = createVeilProgram(provider);
       const marketPk = new PublicKey(market.publicKey);
-      const [vaultPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("vault"), marketPk.toBuffer()],
-        new PublicKey(PROGRAM_ID)
-      );
-      const [positionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("position"), marketPk.toBuffer(), publicKey.toBuffer()],
-        new PublicKey(PROGRAM_ID)
-      );
+      const [positionPda] = derivePositionPda(marketPk, publicKey);
+      const computationOffset = randomComputationOffset();
+      const viewerNonce = randomNonceBn();
 
       await program.methods
-        .claimWinnings()
+        .claimWinnings(computationOffset, viewerNonce)
         .accounts({
           voter: publicKey,
           market: marketPk,
-          vault: vaultPda,
+          userBalance: userBalancePda,
+          pendingState: userBalancePendingPda,
           position: positionPda,
+          ...getCircuitAccounts("claim_payout", computationOffset),
+          arciumProgram: new PublicKey(ARCIUM_PROGRAM_ID),
           systemProgram: SystemProgram.programId,
         })
         .rpc({ commitment: "confirmed" });
 
+      await waitForArciumComputation(provider, computationOffset, "confirmed");
+      await refreshBalance();
       await fetchMarket();
     } catch (err) {
       setClaimError(err.message || "Claim failed");
@@ -210,17 +271,37 @@ export default function MarketDetail({ marketPubkey }) {
     }
   };
 
+  const handleBalanceAction = async (mode) => {
+    try {
+      setBalanceError("");
+      setBalanceAction(mode);
+      if (mode === "deposit") {
+        await deposit(balanceInput);
+      } else if (mode === "recover") {
+        await recoverPendingAction();
+      } else {
+        await withdraw(balanceInput);
+      }
+    } catch (caught) {
+      setBalanceError(caught?.message || "Balance update failed");
+    } finally {
+      setBalanceAction("");
+    }
+  };
+
+  const userWon = useMemo(() => {
+    if (!market || !decryptedPosition || market.status !== 3 || !market.resultPublished) {
+      return false;
+    }
+    return decryptedPosition.isYes === market.yesWins;
+  }, [market, decryptedPosition]);
+
   if (loading) {
     return (
       <div style={{ maxWidth: 780, margin: "0 auto", padding: "40px 24px" }}>
         <div className="skeleton" style={{ height: 18, width: "20%", marginBottom: 32 }} />
         <div className="skeleton" style={{ height: 32, width: "88%", marginBottom: 10 }} />
         <div className="skeleton" style={{ height: 32, width: "72%", marginBottom: 28 }} />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="skeleton" style={{ height: 66 }} />
-          ))}
-        </div>
       </div>
     );
   }
@@ -228,16 +309,7 @@ export default function MarketDetail({ marketPubkey }) {
   if (error) {
     return (
       <div style={{ maxWidth: 780, margin: "0 auto", padding: "40px 24px" }}>
-        <div
-          style={{
-            background: "var(--red-dim)",
-            border: "1px solid var(--red-border)",
-            borderRadius: 10,
-            padding: "14px 16px",
-            color: "var(--red)",
-            fontSize: 12,
-          }}
-        >
+        <div style={{ background: "var(--red-dim)", border: "1px solid var(--red-border)", borderRadius: 10, padding: "14px 16px", color: "var(--red)", fontSize: 12 }}>
           {error}
         </div>
       </div>
@@ -246,17 +318,14 @@ export default function MarketDetail({ marketPubkey }) {
 
   if (!market) return null;
 
-  const pastEnd = new Date() >= market.endTime;
-  const canBet = market.status === 1 && !pastEnd && !position;
+  const pastEnd = hasCrossedEnd || Date.now() >= market.endTime.getTime();
+  const canBet = market.status === 1 && !pastEnd && (!position || position.status === 3);
   const canArchive = publicKey && market.creator === publicKey.toBase58();
-  const userWon = market.status === 3 && market.resultPublished && position
-    ? position.isYes === market.yesWins
-    : false;
   const canClaim =
     market.status === 3 &&
     market.resultPublished &&
     position &&
-    !position.hasClaimed &&
+    position.status === 1 &&
     userWon;
 
   return (
@@ -275,10 +344,7 @@ export default function MarketDetail({ marketPubkey }) {
           marginBottom: 28,
           padding: 0,
           fontFamily: "var(--font-mono)",
-          transition: "color 150ms",
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
-        onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-3)")}
       >
         <ArrowLeft /> Back to Markets
       </button>
@@ -297,30 +363,13 @@ export default function MarketDetail({ marketPubkey }) {
           <StatusBadge status={market.status} />
           <OracleTag isPolymarket={market.isPolymarket} />
           {market.polymarketCategory && (
-            <span
-              className="pill"
-              style={{
-                background: "transparent",
-                color: "var(--text-3)",
-                border: "1px solid var(--border)",
-                fontSize: 9,
-              }}
-            >
+            <span className="pill" style={{ background: "transparent", color: "var(--text-3)", border: "1px solid var(--border)", fontSize: 9 }}>
               {market.polymarketCategory}
             </span>
           )}
         </div>
 
-        <h1
-          style={{
-            fontFamily: "var(--font-sans)",
-            fontWeight: 700,
-            fontSize: "clamp(17px, 3vw, 24px)",
-            lineHeight: 1.35,
-            letterSpacing: "-0.01em",
-            marginBottom: 22,
-          }}
-        >
+        <h1 style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: "clamp(17px, 3vw, 24px)", lineHeight: 1.35, letterSpacing: "-0.01em", marginBottom: 22 }}>
           {market.question}
         </h1>
 
@@ -347,104 +396,118 @@ export default function MarketDetail({ marketPubkey }) {
         )}
 
         <div className="market-detail-stats" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-          <Stat label="TOTAL POOL" value={`${market.totalSolPool} SOL`} accent="var(--text)" />
+          <Stat label="POOL" value="PRIVATE" accent="var(--text)" />
           <Stat label="BETS" value={String(market.voteCount)} />
-          <Stat label={pastEnd ? "ENDED" : "CLOSES"} value={<CountdownTimer endTime={market.endTime} />} />
+          <Stat label={pastEnd ? "ENDED" : "CLOSES"} value={<CountdownTimer endTime={market.endTime} onExpired={handleMarketExpired} />} />
         </div>
       </div>
 
-      {market.isPolymarket &&
-        market.polymarketPrices &&
-        market.status === 1 &&
-        (() => {
-          try {
-            const p = JSON.parse(market.polymarketPrices);
-            const y = (parseFloat(p[0]) * 100).toFixed(0);
-            const n = (parseFloat(p[1]) * 100).toFixed(0);
-            return (
-              <div
-                style={{
-                  background: "var(--bg-card)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 12,
-                  padding: "14px 18px",
-                  marginBottom: 12,
-                }}
-              >
-                <p style={{ fontSize: 9, color: "var(--text-3)", letterSpacing: "0.12em", marginBottom: 10 }}>
-                  POLYMARKET LIVE SENTIMENT
-                </p>
-                <div
+      <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 18px", marginBottom: 12 }}>
+        <p style={{ fontSize: 9, color: "var(--text-3)", letterSpacing: "0.12em", marginBottom: 9 }}>PRIVATE VEIL BALANCE</p>
+        <div className="market-position-row" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 16, color: "var(--text)" }}>
+            {balanceDisplay}
+          </span>
+          <span style={{ fontSize: 12, color: "var(--text-3)" }}>
+            Deposits and withdrawals are public wallet transfers, but per-market stake stays hidden inside this balance.
+          </span>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginBottom: balanceError ? 10 : 0 }}>
+          <input
+            type="number"
+            value={balanceInput}
+            min="0.01"
+            step="0.01"
+            onChange={(e) => setBalanceInput(e.target.value)}
+            style={{ flex: 1, background: "var(--bg-input)", border: "1px solid var(--border)", borderRadius: 9, padding: "10px 12px", color: "var(--text)", fontFamily: "var(--font-mono)" }}
+          />
+          <button
+            onClick={() => handleBalanceAction("deposit")}
+            disabled={balanceAction !== "" || isPending}
+            style={{ background: "var(--text)", color: "var(--bg)", border: "none", borderRadius: 9, padding: "10px 14px", fontFamily: "var(--font-mono)", fontWeight: 700, cursor: balanceAction !== "" || isPending ? "not-allowed" : "pointer", opacity: balanceAction !== "" || isPending ? 0.65 : 1 }}
+          >
+            {balanceAction === "deposit" ? "DEPOSITING..." : "DEPOSIT"}
+          </button>
+          <button
+            onClick={() => handleBalanceAction("withdraw")}
+            disabled={balanceAction !== "" || isPending}
+            style={{ background: "var(--bg-input)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 9, padding: "10px 14px", fontFamily: "var(--font-mono)", fontWeight: 700, cursor: balanceAction !== "" || isPending ? "not-allowed" : "pointer", opacity: balanceAction !== "" || isPending ? 0.65 : 1 }}
+          >
+            {balanceAction === "withdraw" ? "WITHDRAWING..." : "WITHDRAW"}
+          </button>
+          <button
+            onClick={() => refreshBalance()}
+            disabled={balanceAction !== ""}
+            style={{ background: "transparent", color: "var(--text-2)", border: "1px solid var(--border)", borderRadius: 9, padding: "10px 14px", fontFamily: "var(--font-mono)", fontWeight: 700, cursor: balanceAction !== "" ? "not-allowed" : "pointer" }}
+          >
+            REFRESH
+          </button>
+        </div>
+        {balanceError && (
+          <div style={{ padding: "9px 12px", background: "var(--red-dim)", border: "1px solid var(--red-border)", borderRadius: 8, fontSize: 11, color: "var(--red)" }}>
+            {balanceError}
+          </div>
+        )}
+        {!balanceError && isPending && (
+          <div style={{ padding: "10px 12px", background: "var(--bg-input)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 11, color: "var(--text-2)", display: "grid", gap: 6 }}>
+            <div>
+              <strong style={{ color: "var(--text)" }}>On-chain status:</strong> {pendingActionLabel}
+              {pendingWithdrawDisplay ? ` (${pendingWithdrawDisplay})` : ""}
+            </div>
+            <div>{pendingMessage}</div>
+            {pendingAgeSlots !== null && (
+              <div style={{ color: "var(--text-3)" }}>
+                Pending age: {pendingAgeSlots} slots. Recovery threshold: {pendingRecoveryThresholdSlots} slots.
+              </div>
+            )}
+            {pendingAssessment && <div style={{ color: "var(--text-3)" }}>{pendingAssessment}</div>}
+            {canRecoverPendingAction && (
+              <div>
+                <button
+                  onClick={() => handleBalanceAction("recover")}
+                  disabled={balanceAction !== ""}
                   style={{
-                    display: "flex",
-                    gap: 3,
-                    height: 5,
-                    borderRadius: 99,
-                    overflow: "hidden",
-                    marginBottom: 9,
+                    background: "var(--text)",
+                    color: "var(--bg)",
+                    border: "none",
+                    borderRadius: 9,
+                    padding: "10px 14px",
+                    fontFamily: "var(--font-mono)",
+                    fontWeight: 700,
+                    cursor: balanceAction !== "" ? "not-allowed" : "pointer",
                   }}
                 >
-                  <div
-                    style={{
-                      width: `${y}%`,
-                      background: "var(--cyan)",
-                      borderRadius: 99,
-                      transition: "width 1s ease",
-                    }}
-                  />
-                  <div style={{ flex: 1, background: "var(--red-dim)", borderRadius: 99 }} />
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: 12, color: "var(--cyan)" }}>YES {y}%</span>
-                  <span style={{ fontSize: 12, color: "var(--red)" }}>NO {n}%</span>
-                </div>
+                  {balanceAction === "recover" ? "RECOVERING..." : "RECOVER STALE ACTION"}
+                </button>
               </div>
-            );
-          } catch {
-            return null;
-          }
-        })()}
-
-      {position && (
-        <div
-          className="market-position-card"
-          style={{
-            background: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: 12,
-            padding: "14px 18px",
-            marginBottom: 12,
-          }}
-        >
-          <p style={{ fontSize: 9, color: "var(--text-3)", letterSpacing: "0.12em", marginBottom: 9 }}>
-            MY POSITION
-          </p>
-          <div className="market-position-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontWeight: 700,
-                fontSize: 16,
-                color: position.isYes ? "var(--cyan)" : "var(--red)",
-              }}
-            >
-              {position.isYes ? "YES" : "NO"}
-            </span>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{position.stake} SOL</span>
-            {position.hasClaimed && (
-              <span
-                className="pill"
-                style={{
-                  background: "var(--green-dim)",
-                  color: "var(--green)",
-                  border: "1px solid var(--green-border)",
-                  fontSize: 9,
-                }}
-              >
-                CLAIMED
-              </span>
             )}
           </div>
+        )}
+        {!balanceError && privateBalanceError && !isPending && (
+          <div style={{ padding: "9px 12px", background: "var(--red-dim)", border: "1px solid var(--red-border)", borderRadius: 8, fontSize: 11, color: "var(--red)" }}>
+            {privateBalanceError}
+          </div>
+        )}
+      </div>
+
+      {position && (
+        <div className="market-position-card" style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 18px", marginBottom: 12 }}>
+          <p style={{ fontSize: 9, color: "var(--text-3)", letterSpacing: "0.12em", marginBottom: 9 }}>MY PRIVATE POSITION</p>
+          {decryptedPosition ? (
+            <div className="market-position-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 16, color: decryptedPosition.isYes ? "var(--cyan)" : "var(--red)" }}>
+                {decryptedPosition.isYes ? "YES" : "NO"}
+              </span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{decryptedPosition.stakeSol.toFixed(3)} SOL</span>
+              <span className="pill" style={{ background: "transparent", color: "var(--text-3)", border: "1px solid var(--border)", fontSize: 9 }}>
+                {position.status === 0 ? "PENDING" : position.status === 1 ? "ACTIVE" : position.status === 2 ? "CLAIMED" : "REJECTED"}
+              </span>
+            </div>
+          ) : (
+            <p style={{ fontSize: 12, color: "var(--text-2)" }}>
+              Position exists, but this browser cannot decrypt it yet. Use the same local private key context that created the bet.
+            </p>
+          )}
         </div>
       )}
 
@@ -463,13 +526,10 @@ export default function MarketDetail({ marketPubkey }) {
             fontSize: 13,
             letterSpacing: "0.08em",
             cursor: "pointer",
-            transition: "opacity 150ms",
             marginBottom: 12,
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
         >
-          PLACE ENCRYPTED BET
+          PLACE PRIVATE BET
         </button>
       )}
 
@@ -503,37 +563,15 @@ export default function MarketDetail({ marketPubkey }) {
             marginTop: 12,
           }}
         >
-          <p
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontWeight: 700,
-              fontSize: 28,
-              letterSpacing: "-0.01em",
-              color: market.yesWins ? "var(--cyan)" : "var(--red)",
-              marginBottom: 10,
-            }}
-          >
+          <p style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 28, letterSpacing: "-0.01em", color: market.yesWins ? "var(--cyan)" : "var(--red)", marginBottom: 10 }}>
             {market.yesWins ? "YES WON" : "NO WON"}
           </p>
-          <div style={{ display: "flex", justifyContent: "center", gap: 24 }}>
-            <span style={{ fontSize: 12, color: "var(--cyan)" }}>
-              YES: {lamportsToSol(market.plaintextTotalYes)} SOL
-            </span>
-            <span style={{ fontSize: 12, color: "var(--red)" }}>
-              NO: {lamportsToSol(market.plaintextTotalNo)} SOL
-            </span>
-          </div>
+          <p style={{ fontSize: 12, color: "var(--text-3)" }}>
+            Outcome is public. Aggregated stake totals remain encrypted and payouts are credited to private VEIL balances.
+          </p>
 
           {position && (
-            <div
-              style={{
-                marginTop: 18,
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-                alignItems: "center",
-              }}
-            >
+            <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
               {canClaim && (
                 <button
                   onClick={handleClaim}
@@ -551,35 +589,24 @@ export default function MarketDetail({ marketPubkey }) {
                     cursor: claiming ? "not-allowed" : "pointer",
                   }}
                 >
-                  {claiming ? "CLAIMING..." : "CLAIM WINNINGS"}
+                  {claiming ? "CLAIMING..." : "CLAIM TO PRIVATE BALANCE"}
                 </button>
               )}
 
-              {!position.hasClaimed && !userWon && (
+              {!canClaim && position.status === 1 && decryptedPosition && !userWon && (
                 <p style={{ fontSize: 12, color: "var(--text-3)" }}>
-                  This position did not win, so there is nothing to claim.
+                  This private position did not win.
                 </p>
               )}
 
-              {position.hasClaimed && (
+              {position.status === 2 && (
                 <p style={{ fontSize: 12, color: "var(--green)" }}>
-                  Winnings already claimed.
+                  Claimed into your private balance.
                 </p>
               )}
 
               {claimError && (
-                <div
-                  style={{
-                    width: "100%",
-                    maxWidth: 360,
-                    padding: "9px 12px",
-                    background: "var(--red-dim)",
-                    border: "1px solid var(--red-border)",
-                    borderRadius: 8,
-                    fontSize: 11,
-                    color: "var(--red)",
-                  }}
-                >
+                <div style={{ width: "100%", maxWidth: 360, padding: "9px 12px", background: "var(--red-dim)", border: "1px solid var(--red-border)", borderRadius: 8, fontSize: 11, color: "var(--red)" }}>
                   {claimError}
                 </div>
               )}
@@ -590,3 +617,5 @@ export default function MarketDetail({ marketPubkey }) {
     </div>
   );
 }
+
+

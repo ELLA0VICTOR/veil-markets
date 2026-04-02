@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useConnection } from "@solana/wallet-adapter-react";
 import { AnchorProvider } from "@coral-xyz/anchor";
 import { useAnchorWallet } from "@solana/wallet-adapter-react";
-import { decodeQuestion, lamportsToSol } from "../utils/solana";
+import { decodeQuestion } from "../utils/solana";
 import { bytesToConditionId, isZeroConditionId, fetchPolymarketMarket } from "../utils/polymarket";
 import { getArchivedMarketIds } from "../utils/archivedMarkets";
-import { createReadonlyProvider, createVeilProgram } from "../utils/program";
+import { createReadonlyProvider, createVeilProgram, fetchAllDecodableAccounts } from "../utils/program";
 
 const POLL_INTERVAL = 15_000;
 
@@ -26,7 +26,7 @@ export function useMarkets() {
 
       const program = createVeilProgram(provider);
 
-      const allAccounts = await program.account.market.all();
+      const allAccounts = await fetchAllDecodableAccounts(program, "market");
 
       const enriched = await Promise.allSettled(
         allAccounts.map(async ({ publicKey, account }) => {
@@ -52,22 +52,16 @@ export function useMarkets() {
             status: account.status,
             isPolymarket,
             conditionId: isPolymarket ? bytesToConditionId(conditionIdBytes) : null,
-            totalSolPool: lamportsToSol(account.totalSolPool),
-            totalSolPoolLamports: account.totalSolPool.toNumber(),
             voteCount: account.voteCount,
             yesWins: account.yesWins,
             resultPublished: account.resultPublished,
-            plainTextTotalYes: lamportsToSol(account.plaintextTotalYes),
-            plainTextTotalNo: lamportsToSol(account.plaintextTotalNo),
-            // Raw encrypted state for MPC operations
             stateNonce: account.stateNonce,
             stateCtYes: account.stateCtYes,
             stateCtNo: account.stateCtNo,
-            resultEncryptionKey: account.resultEncryptionKey,
-            resultNonce: account.resultNonce,
-            resultCtTotalYes: account.resultCtTotalYes,
-            resultCtTotalNo: account.resultCtTotalNo,
-            resultCtYesWins: account.resultCtYesWins,
+            resolvedNonce: account.resolvedNonce,
+            resolvedCtTotalYes: account.resolvedCtTotalYes,
+            resolvedCtTotalNo: account.resolvedCtTotalNo,
+            resolvedCtYesWins: account.resolvedCtYesWins,
             // Polymarket live data if available
             polymarketPrices: polymarketData?.outcomePrices || null,
             polymarketVolume: polymarketData?.volume || null,
@@ -81,7 +75,10 @@ export function useMarkets() {
         .filter((r) => r.status === "fulfilled")
         .map((r) => r.value)
         .filter((market) => !archivedIds.has(market.publicKey))
-        .sort((a, b) => b.totalSolPoolLamports - a.totalSolPoolLamports);
+        .sort((a, b) => {
+          if (b.voteCount !== a.voteCount) return b.voteCount - a.voteCount;
+          return a.endTime.getTime() - b.endTime.getTime();
+        });
 
       setMarkets(validMarkets);
       setError(null);
