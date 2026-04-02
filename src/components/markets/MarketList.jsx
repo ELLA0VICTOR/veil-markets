@@ -185,7 +185,7 @@ export default function MarketList() {
   const [createTab, setCreateTab] = useState("custom");
   const [selectedImportMarket, setSelectedImportMarket] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState("LIVE");
+  const [tab, setTab] = useState("DISCOVER");
   const [flashMessage, setFlashMessage] = useState("");
 
   const importedConditionIds = useMemo(
@@ -234,8 +234,8 @@ export default function MarketList() {
 
   const tabConfig = useMemo(
     () => [
-      { id: "LIVE", count: liveMarkets.length },
       { id: "DISCOVER", count: importablePolymarkets.length },
+      { id: "LIVE", count: liveMarkets.length },
       { id: "AWAITING", count: awaitingResolutionMarkets.length },
       { id: "HISTORY", count: historyMarkets.length },
       { id: "HIDDEN", count: hiddenMarkets.length },
