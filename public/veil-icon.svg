@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="VEIL Markets">
+  <rect width="64" height="64" fill="#05060a"/>
+  <path d="M12 18h40v28H12z" fill="none" stroke="#ffffff" stroke-width="4"/>
+  <path d="M18 39c5-13 23-13 28 0" fill="none" stroke="#22c55e" stroke-width="4" stroke-linecap="square"/>
+  <path d="M24 28h16" stroke="#ffffff" stroke-width="4" stroke-linecap="square"/>
+  <path d="M20 18V12h24v6" fill="none" stroke="#22c55e" stroke-width="4"/>
+</svg>

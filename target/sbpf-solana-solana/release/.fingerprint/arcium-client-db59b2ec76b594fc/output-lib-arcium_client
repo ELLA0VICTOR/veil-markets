@@ -1,2 +1,0 @@
-Error: Function _ZN109_$LT$arcium_client..idl..arcium..utils..Account$u20$as$u20$core..convert..TryFrom$LT$$RF$$u5b$u8$u5d$$GT$$GT$8try_from17hb5e99b6cccdb53f2E Stack offset of 865512 exceeded max offset of 4096 by 861416 bytes, please minimize large stack variables. Estimated function frame size: 865536 bytes. Exceeding the maximum stack offset may cause undefined behavior during execution.
-

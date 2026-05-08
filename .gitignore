@@ -23,3 +23,17 @@ dist-ssr
 *.sln
 *.sw?
 .env.example
+
+# Local environment and generated output
+.env
+.env.*
+node_modules/
+dist/
+.anchor/
+target/
+build/
+
+# Local Solana/Arcium key material
+recovered-buffer.json
+*-keypair.json
+target/deploy/*-keypair.json
