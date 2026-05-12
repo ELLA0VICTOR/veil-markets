@@ -78,10 +78,18 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
   const [phase, setPhase] = useState("idle");
   const [error, setError] = useState("");
   const [txSignature, setTxSignature] = useState("");
+  const isCreator = Boolean(
+    publicKey && market?.creator && market.creator === publicKey.toBase58()
+  );
 
   const handleSubmit = async () => {
     if (!wallet || !publicKey) {
       setError("Connect your wallet first");
+      return;
+    }
+
+    if (isCreator) {
+      setError("Market creators cannot bet on their own market.");
       return;
     }
 
@@ -283,6 +291,21 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
             {privateBalanceError}
           </div>
         )}
+        {isCreator && (
+          <div
+            style={{
+              padding: "9px 12px",
+              background: "var(--red-dim)",
+              border: "1px solid var(--red-border)",
+              borderRadius: 8,
+              fontSize: 11,
+              color: "var(--red)",
+              marginBottom: 16,
+            }}
+          >
+            Market creators cannot bet on their own market. Switch wallets to test trader flow.
+          </div>
+        )}
 
         <p style={{ fontSize: 9, color: "var(--text-3)", letterSpacing: "0.12em", marginBottom: 8 }}>
           YOUR PREDICTION
@@ -325,7 +348,7 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
             onChange={(e) => setAmount(e.target.value)}
             min={MIN_BET_SOL}
             step="0.01"
-            disabled={active}
+            disabled={active || isCreator}
             style={{
               width: "100%",
               background: "var(--bg-input)",
@@ -430,10 +453,10 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
 
         <button
           onClick={handleSubmit}
-          disabled={active || done}
+          disabled={active || done || isCreator}
           style={{
             width: "100%",
-            background: active || done ? "var(--bg-input)" : "var(--text)",
+            background: active || done || isCreator ? "var(--bg-input)" : "var(--text)",
             border: "none",
             borderRadius: 10,
             padding: "13px",
@@ -441,13 +464,15 @@ export default function PlaceBetModal({ market, onClose, onSuccess }) {
             fontWeight: 800,
             fontSize: 13,
             letterSpacing: "0.07em",
-            color: active || done ? "var(--text-3)" : "var(--bg)",
-            cursor: active || done ? "not-allowed" : "pointer",
+            color: active || done || isCreator ? "var(--text-3)" : "var(--bg)",
+            cursor: active || done || isCreator ? "not-allowed" : "pointer",
           }}
         >
           {active
             ? "PROCESSING..."
-            : done
+            : isCreator
+              ? "CREATOR CANNOT BET"
+              : done
               ? "PRIVATE BET RECORDED"
               : `BET ${isYes ? "YES" : "NO"} · ${amount} SOL`}
         </button>

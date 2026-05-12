@@ -1,5 +1,5 @@
 {
-  "address": "Hq6Jyd8FjALKcdQoReCdsoyi51DW3dWHyGHVA2vWhU8z",
+  "address": "H3Tys4bijMdVYE8FPmNSdqsFwhZGiLRNQr7NXj8wkYsE",
   "metadata": {
     "name": "veil_markets",
     "version": "0.1.0",
@@ -2435,8 +2435,78 @@
   "errors": [
     {
       "code": 6000,
-      "name": "ClusterNotSet",
-      "msg": "Cluster not set in MXE account"
+      "name": "AbortedComputation",
+      "msg": "Computation was aborted by the MPC cluster"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidEndTime",
+      "msg": "End time must be in the future"
+    },
+    {
+      "code": 6002,
+      "name": "MarketNotOpen",
+      "msg": "This market is not open"
+    },
+    {
+      "code": 6003,
+      "name": "MarketStillActive",
+      "msg": "This action is not available yet"
+    },
+    {
+      "code": 6004,
+      "name": "MarketNotSettled",
+      "msg": "This market is not settled yet"
+    },
+    {
+      "code": 6005,
+      "name": "PublicSeedDisabled",
+      "msg": "Creator seed deposits are disabled in private mode"
+    },
+    {
+      "code": 6006,
+      "name": "BalanceUpdatePending",
+      "msg": "Another private balance update is already pending"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidAmount",
+      "msg": "Private balance amount must be greater than zero"
+    },
+    {
+      "code": 6008,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 6009,
+      "name": "PositionAlreadyExists",
+      "msg": "You already have an active private position for this market"
+    },
+    {
+      "code": 6010,
+      "name": "PositionNotClaimable",
+      "msg": "This position cannot be claimed"
+    },
+    {
+      "code": 6011,
+      "name": "NoPendingBalanceAction",
+      "msg": "There is no pending private balance action to recover"
+    },
+    {
+      "code": 6012,
+      "name": "PendingActionStillFresh",
+      "msg": "This pending balance action is still within the callback wait window"
+    },
+    {
+      "code": 6013,
+      "name": "PendingStateMismatch",
+      "msg": "The pending balance state does not match this private balance account"
+    },
+    {
+      "code": 6014,
+      "name": "CreatorCannotBet",
+      "msg": "Market creator cannot bet on their own market"
     }
   ],
   "types": [

@@ -159,7 +159,7 @@ veil-markets/
 
 Current devnet program id:
 
-- `Hq6Jyd8FjALKcdQoReCdsoyi51DW3dWHyGHVA2vWhU8z`
+- `H3Tys4bijMdVYE8FPmNSdqsFwhZGiLRNQr7NXj8wkYsE`
 
 Current constants:
 
@@ -268,7 +268,7 @@ Or use direct Solana deploy if needed for a more reliable upgrade path:
 
 ```bash
 solana program deploy target/deploy/veil_markets.so \
-  --program-id Hq6Jyd8FjALKcdQoReCdsoyi51DW3dWHyGHVA2vWhU8z \
+  --program-id H3Tys4bijMdVYE8FPmNSdqsFwhZGiLRNQr7NXj8wkYsE \
   --upgrade-authority ~/.config/solana/id.json \
   --url https://api.devnet.solana.com \
   --use-rpc
@@ -307,7 +307,7 @@ POLYMARKET_ALLOW_ORIGIN=https://your-vercel-app.vercel.app
 ### Frontend env
 
 ```bash
-VITE_PROGRAM_ID=Hq6Jyd8FjALKcdQoReCdsoyi51DW3dWHyGHVA2vWhU8z
+VITE_PROGRAM_ID=H3Tys4bijMdVYE8FPmNSdqsFwhZGiLRNQr7NXj8wkYsE
 VITE_RPC_ENDPOINT=https://your-devnet-rpc
 VITE_BACKEND_API_BASE=https://your-render-service.onrender.com
 VITE_POLYMARKET_API_BASE=https://your-render-service.onrender.com/api/polymarket

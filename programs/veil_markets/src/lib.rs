@@ -4,7 +4,7 @@ use arcium_anchor::prelude::*;
 use arcium_client::idl::arcium::types::{CallbackAccount, CircuitSource, OffChainCircuitSource};
 use arcium_macros::*;
 
-declare_id!("Hq6Jyd8FjALKcdQoReCdsoyi51DW3dWHyGHVA2vWhU8z");
+declare_id!("H3Tys4bijMdVYE8FPmNSdqsFwhZGiLRNQr7NXj8wkYsE");
 
 const CLUSTER_OFFSET: u64 = 456;
 
@@ -674,6 +674,10 @@ pub mod veil_markets {
         require!(
             ctx.accounts.user_balance.pending_action == BALANCE_ACTION_NONE,
             VeilError::BalanceUpdatePending
+        );
+        require!(
+            ctx.accounts.voter.key() != ctx.accounts.market.creator,
+            VeilError::CreatorCannotBet
         );
 
         if ctx.accounts.position.market != Pubkey::default()
@@ -1831,4 +1835,6 @@ pub enum VeilError {
     PendingActionStillFresh,
     #[msg("The pending balance state does not match this private balance account")]
     PendingStateMismatch,
+    #[msg("Market creator cannot bet on their own market")]
+    CreatorCannotBet,
 }

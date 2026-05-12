@@ -327,7 +327,11 @@ export default function MarketDetail({ marketPubkey }) {
   if (!market) return null;
 
   const pastEnd = hasCrossedEnd || Date.now() >= market.endTime.getTime();
-  const canBet = market.status === 1 && !pastEnd && (!position || position.status === 3);
+  const isCreator = Boolean(
+    publicKey && market.creator === publicKey.toBase58()
+  );
+  const canBet =
+    market.status === 1 && !pastEnd && !isCreator && (!position || position.status === 3);
   const canHideFromDashboard = Boolean(market);
   const canClaim =
     market.status === 3 &&
@@ -428,6 +432,25 @@ export default function MarketDetail({ marketPubkey }) {
           </p>
           <p style={{ fontSize: 12, color: "var(--text-2)" }}>
             Betting is closed. This market will stay in the global &quot;Awaiting Resolution&quot; section until the creator publishes the outcome.
+          </p>
+        </div>
+      )}
+
+      {isCreator && market.status === 1 && !pastEnd && (
+        <div
+          style={{
+            background: "var(--red-dim)",
+            border: "1px solid var(--red-border)",
+            borderRadius: 12,
+            padding: "14px 16px",
+            marginBottom: 12,
+          }}
+        >
+          <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "var(--red)", marginBottom: 6 }}>
+            CREATOR TRADING LOCK
+          </p>
+          <p style={{ fontSize: 12, color: "var(--text-2)" }}>
+            Market creators cannot bet on their own market. Switch wallets to test the trader flow.
           </p>
         </div>
       )}
