@@ -24,10 +24,17 @@ export function useMarkets() {
   const [markets, setMarkets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [warming, setWarming] = useState(false);
   const intervalRef = useRef(null);
+  const retryTimeoutRef = useRef(null);
+  const hasLoadedMarketsRef = useRef(false);
 
   const fetchMarkets = useCallback(async () => {
     try {
+      if (retryTimeoutRef.current) {
+        window.clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
       // Use a read-only provider if no wallet connected
       const provider = wallet
         ? new AnchorProvider(connection, wallet, { commitment: "confirmed" })
@@ -92,9 +99,18 @@ export function useMarkets() {
         });
 
       setMarkets(validMarkets);
+      hasLoadedMarketsRef.current = true;
       setError(null);
+      setWarming(false);
     } catch (err) {
-      setError(err.message || "Failed to fetch markets");
+      if (hasLoadedMarketsRef.current) {
+        setError(err.message || "Failed to fetch markets");
+        setWarming(false);
+      } else {
+        setError(null);
+        setWarming(true);
+        retryTimeoutRef.current = window.setTimeout(fetchMarkets, 4500);
+      }
     } finally {
       setLoading(false);
     }
@@ -103,8 +119,11 @@ export function useMarkets() {
   useEffect(() => {
     fetchMarkets();
     intervalRef.current = setInterval(fetchMarkets, POLL_INTERVAL);
-    return () => clearInterval(intervalRef.current);
+    return () => {
+      clearInterval(intervalRef.current);
+      if (retryTimeoutRef.current) window.clearTimeout(retryTimeoutRef.current);
+    };
   }, [fetchMarkets]);
 
-  return { markets, loading, error, refetch: fetchMarkets };
+  return { markets, loading, error, warming, refetch: fetchMarkets };
 }

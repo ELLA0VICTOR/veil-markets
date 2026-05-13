@@ -41,10 +41,16 @@ export function usePolymarketFeed(limit = 20) {
   const [markets, setMarkets] = useState(() => hydrateCachedMarkets(limit));
   const [loading, setLoading] = useState(() => hydrateCachedMarkets(limit).length === 0);
   const [error, setError] = useState(null);
+  const [warming, setWarming] = useState(false);
   const intervalRef = useRef(null);
+  const retryTimeoutRef = useRef(null);
 
   const fetchMarkets = useCallback(async () => {
     try {
+      if (retryTimeoutRef.current) {
+        window.clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
       setError(null);
       const now = new Date();
       const data = await fetchPolymarketMarkets(limit, 0);
@@ -56,13 +62,17 @@ export function usePolymarketFeed(limit = 20) {
 
       cacheMarkets(activeOnly);
       setMarkets(activeOnly);
-    } catch (err) {
+      setWarming(false);
+    } catch {
       const cached = hydrateCachedMarkets(limit);
       if (cached.length > 0) {
         setMarkets(cached);
         setError(null);
+        setWarming(false);
       } else {
-        setError(err.message || "Failed to fetch Polymarket markets");
+        setError(null);
+        setWarming(true);
+        retryTimeoutRef.current = window.setTimeout(fetchMarkets, 4500);
       }
     } finally {
       setLoading(false);
@@ -72,8 +82,11 @@ export function usePolymarketFeed(limit = 20) {
   useEffect(() => {
     fetchMarkets();
     intervalRef.current = setInterval(fetchMarkets, POLL_INTERVAL);
-    return () => clearInterval(intervalRef.current);
+    return () => {
+      clearInterval(intervalRef.current);
+      if (retryTimeoutRef.current) window.clearTimeout(retryTimeoutRef.current);
+    };
   }, [fetchMarkets]);
 
-  return { markets, loading, error, refetch: fetchMarkets };
+  return { markets, loading, error, warming, refetch: fetchMarkets };
 }

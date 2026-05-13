@@ -213,11 +213,12 @@ function sortImportableMarkets(markets, mode) {
 }
 
 export default function MarketList() {
-  const { markets, loading, error, refetch } = useMarkets();
+  const { markets, loading, error, warming: marketsWarming, refetch } = useMarkets();
   const {
     markets: polymarketFeed,
     loading: polymarketLoading,
     error: polymarketError,
+    warming: polymarketWarming,
   } = usePolymarketFeed(6);
   const [showCreate, setShowCreate] = useState(false);
   const [createTab, setCreateTab] = useState("custom");
@@ -544,6 +545,22 @@ export default function MarketList() {
         </div>
       )}
 
+      {(marketsWarming || polymarketWarming) && !loading && (
+        <div
+          style={{
+            marginBottom: 18,
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            borderRadius: 10,
+            padding: "12px 16px",
+            color: "var(--text-2)",
+            fontSize: 12,
+          }}
+        >
+          Waking market feed and retrying quietly...
+        </div>
+      )}
+
       {polymarketLoading && !loading && importablePolymarkets.length === 0 && (
         <div
           style={{
@@ -560,7 +577,7 @@ export default function MarketList() {
         </div>
       )}
 
-      {!loading && !error && filteredDisplayedMarkets.length === 0 && filteredImportablePolymarkets.length === 0 && (
+      {!loading && !error && !marketsWarming && !polymarketWarming && filteredDisplayedMarkets.length === 0 && filteredImportablePolymarkets.length === 0 && (
         <div className="anim-in" style={{ textAlign: "center", padding: "64px 24px" }}>
           <p style={{ fontFamily: "var(--font-sans)", fontSize: 16, color: "var(--text-2)", marginBottom: 8 }}>
             {activeMeta.emptyTitle}
@@ -585,7 +602,7 @@ export default function MarketList() {
         </div>
       )}
 
-      {polymarketError && (
+      {polymarketError && !polymarketWarming && (
         <div
           style={{
             marginTop: 24,
