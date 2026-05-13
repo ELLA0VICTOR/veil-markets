@@ -1,8 +1,13 @@
 import { Suspense, lazy, useState, useEffect } from "react";
 import Navbar from "./components/layout/Navbar";
+import Footer from "./components/layout/Footer";
 
-const MarketList  = lazy(() => import("./components/markets/MarketList"));
+const MarketList = lazy(() => import("./components/markets/MarketList"));
 const MarketDetail = lazy(() => import("./components/markets/MarketDetail"));
+const Leaderboard = lazy(() => import("./components/leaderboard/Leaderboard"));
+const History = lazy(() => import("./components/history/History"));
+const ResolveQueue = lazy(() => import("./components/resolve/ResolveQueue"));
+const FAQ = lazy(() => import("./components/faq/FAQ"));
 
 function useHashRouter() {
   const [path, setPath] = useState(() => window.location.hash || "#/");
@@ -24,17 +29,39 @@ function Fallback() {
 }
 
 export default function App() {
-  const path        = useHashRouter();
+  const path = useHashRouter();
   const marketMatch = path.match(/^#\/market\/([A-Za-z0-9]+)$/);
+  const activePage = marketMatch
+    ? "markets"
+    : path === "#/leaderboard"
+      ? "leaderboard"
+      : path === "#/history"
+        ? "history"
+        : path === "#/resolve"
+          ? "resolve"
+          : path === "#/faq"
+            ? "faq"
+            : "markets";
 
   return (
     <div className="grid-bg" style={{ minHeight: "100vh" }}>
-      <Navbar />
+      <Navbar activePage={activePage} />
       <Suspense fallback={<Fallback />}>
-        {marketMatch
-          ? <MarketDetail marketPubkey={marketMatch[1]} />
-          : <MarketList />}
+        {marketMatch ? (
+          <MarketDetail marketPubkey={marketMatch[1]} />
+        ) : path === "#/leaderboard" ? (
+          <Leaderboard />
+        ) : path === "#/history" ? (
+          <History />
+        ) : path === "#/resolve" ? (
+          <ResolveQueue />
+        ) : path === "#/faq" ? (
+          <FAQ />
+        ) : (
+          <MarketList />
+        )}
       </Suspense>
+      <Footer />
     </div>
   );
 }

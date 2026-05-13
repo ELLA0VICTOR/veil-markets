@@ -1,12 +1,47 @@
 const GAMMA_API =
   import.meta.env.VITE_POLYMARKET_API_BASE || "/api/polymarket";
+const DIRECT_GAMMA_API = "https://gamma-api.polymarket.com";
+const POLYMARKET_TIMEOUT_MS = Number(import.meta.env.VITE_POLYMARKET_TIMEOUT_MS || 4500);
+const DISABLE_DIRECT_FALLBACK =
+  import.meta.env.VITE_DISABLE_DIRECT_POLYMARKET_FALLBACK === "true";
+
+function joinUrl(base, path) {
+  return `${base.replace(/\/$/, "")}${path}`;
+}
+
+async function fetchJson(base, path, timeoutMs = POLYMARKET_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(joinUrl(base, path), { signal: controller.signal });
+    if (!res.ok) throw new Error(`Polymarket API error: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    if (err.name === "AbortError") {
+      throw new Error("Polymarket API timed out");
+    }
+    throw err;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+async function fetchPolymarketJson(path) {
+  try {
+    return await fetchJson(GAMMA_API, path);
+  } catch (err) {
+    const alreadyDirect = GAMMA_API.includes("gamma-api.polymarket.com");
+    if (DISABLE_DIRECT_FALLBACK || alreadyDirect) throw err;
+    return fetchJson(DIRECT_GAMMA_API, path, 6500);
+  }
+}
 
 // Fetch active binary YES/NO markets from Polymarket
 export async function fetchPolymarketMarkets(limit = 20, offset = 0) {
-  const url = `${GAMMA_API}/markets?active=true&closed=false&limit=${limit}&offset=${offset}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Polymarket API error: ${res.status}`);
-  const data = await res.json();
+  const data = await fetchPolymarketJson(
+    `/markets?active=true&closed=false&limit=${limit}&offset=${offset}`
+  );
 
   return data
     .filter((m) => {
@@ -27,11 +62,9 @@ export async function fetchPolymarketMarkets(limit = 20, offset = 0) {
 
 // Fetch a single market by conditionId
 export async function fetchPolymarketMarket(conditionId) {
-  const res = await fetch(
-    `${GAMMA_API}/markets?condition_ids=${encodeURIComponent(conditionId)}`
+  const data = await fetchPolymarketJson(
+    `/markets?condition_ids=${encodeURIComponent(conditionId)}`
   );
-  if (!res.ok) throw new Error(`Market not found: ${conditionId}`);
-  const data = await res.json();
   const market = Array.isArray(data) ? data[0] : data;
   if (!market) throw new Error(`Market not found: ${conditionId}`);
   const normalized = normalizePolymarket(market);

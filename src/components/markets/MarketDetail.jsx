@@ -11,11 +11,6 @@ import {
   isZeroConditionId,
   fetchPolymarketMarket,
 } from "../../utils/polymarket";
-import {
-  hideMarketFromDashboard,
-  isMarketHidden,
-  showMarketOnDashboard,
-} from "../../utils/archivedMarkets";
 import { decryptStoredVote } from "../../utils/arcium";
 import { getCircuitAccounts, getMxePublicKeyWithRetry, waitForArciumComputation } from "../../utils/arciumAccounts";
 import { usePrivateBalance } from "../../hooks/usePrivateBalance";
@@ -96,7 +91,6 @@ export default function MarketDetail({ marketPubkey }) {
   const wallet = useAnchorWallet();
   const { publicKey } = useWallet();
   const {
-    balanceSol,
     balanceDisplay,
     keypair,
     error: privateBalanceError,
@@ -121,7 +115,6 @@ export default function MarketDetail({ marketPubkey }) {
   const [showBet, setShowBet] = useState(false);
   const [position, setPosition] = useState(null);
   const [decryptedPosition, setDecryptedPosition] = useState(null);
-  const [hiddenFromDashboard, setHiddenFromDashboard] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [claimError, setClaimError] = useState("");
   const [balanceInput, setBalanceInput] = useState("1");
@@ -148,7 +141,9 @@ export default function MarketDetail({ marketPubkey }) {
       if (isPoly && !isZeroConditionId(cidBytes)) {
         try {
           pmData = await fetchPolymarketMarket(bytesToConditionId(cidBytes));
-        } catch {}
+        } catch {
+          // Use on-chain market data if Polymarket enrichment fails.
+        }
       }
 
       const endTime = new Date(acct.endTime.toNumber() * 1000);
@@ -201,8 +196,6 @@ export default function MarketDetail({ marketPubkey }) {
           setDecryptedPosition(null);
         }
       }
-
-      setHiddenFromDashboard(isMarketHidden(pubkey.toBase58()));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -226,17 +219,6 @@ export default function MarketDetail({ marketPubkey }) {
     setHasCrossedEnd(true);
     fetchMarket();
   }, [fetchMarket]);
-
-  const handleToggleDashboardVisibility = () => {
-    if (!market) return;
-    if (hiddenFromDashboard) {
-      showMarketOnDashboard(market.publicKey);
-      setHiddenFromDashboard(false);
-      return;
-    }
-    hideMarketFromDashboard(market.publicKey);
-    setHiddenFromDashboard(true);
-  };
 
   const handleClaim = async () => {
     if (!wallet || !publicKey || !market || !userBalancePda || !userBalancePendingPda) {
@@ -332,7 +314,6 @@ export default function MarketDetail({ marketPubkey }) {
   );
   const canBet =
     market.status === 1 && !pastEnd && !isCreator && (!position || position.status === 3);
-  const canHideFromDashboard = Boolean(market);
   const canClaim =
     market.status === 3 &&
     market.resultPublished &&
@@ -385,31 +366,6 @@ export default function MarketDetail({ marketPubkey }) {
           {market.question}
         </h1>
 
-        {canHideFromDashboard && (
-          <div style={{ marginBottom: 18 }}>
-            <button
-              onClick={handleToggleDashboardVisibility}
-              style={{
-                background: hiddenFromDashboard ? "var(--bg-input)" : "transparent",
-                color: hiddenFromDashboard ? "var(--text)" : "var(--text-2)",
-                border: "1px solid var(--border)",
-                borderRadius: 9,
-                padding: "9px 14px",
-                fontFamily: "var(--font-mono)",
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: "0.05em",
-                cursor: "pointer",
-              }}
-            >
-              {hiddenFromDashboard ? "SHOW ON DASHBOARD" : "HIDE FROM DASHBOARD"}
-            </button>
-            <p style={{ marginTop: 8, fontSize: 11, color: "var(--text-3)" }}>
-              This only changes your local dashboard view. The market stays on-chain and reachable by direct link.
-            </p>
-          </div>
-        )}
-
         <div className="market-detail-stats" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
           <Stat label="POOL" value="PRIVATE" accent="var(--text)" />
           <Stat label="BETS" value={String(market.voteCount)} />
@@ -431,7 +387,7 @@ export default function MarketDetail({ marketPubkey }) {
             MARKET WAITING ON RESOLUTION
           </p>
           <p style={{ fontSize: 12, color: "var(--text-2)" }}>
-            Betting is closed. This market will stay in the global &quot;Awaiting Resolution&quot; section until the creator publishes the outcome.
+            Betting is closed. The creator will see it in their Resolve queue until the outcome is published.
           </p>
         </div>
       )}

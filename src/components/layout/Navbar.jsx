@@ -1,5 +1,7 @@
 import WalletButton from "./WalletButton";
 import { navigate } from "../../utils/navigation";
+import { useMarkets } from "../../hooks/useMarkets";
+import { useWallet } from "../../hooks/useWallet";
 
 function MarketIcon() {
   return (
@@ -27,7 +29,28 @@ function MarketIcon() {
   );
 }
 
-export default function Navbar() {
+const NAV_ITEMS = [
+  { id: "markets", label: "Markets", href: "#/" },
+  { id: "leaderboard", label: "Leaderboard", href: "#/leaderboard" },
+  { id: "history", label: "History", href: "#/history" },
+  { id: "faq", label: "FAQ", href: "#/faq" },
+];
+
+export default function Navbar({ activePage = "markets" }) {
+  const { markets } = useMarkets();
+  const { publicKey } = useWallet();
+  const walletAddress = publicKey?.toBase58();
+  const resolveCount = walletAddress
+    ? markets.filter((market) => market.lifecycle === "awaiting-resolution" && market.creator === walletAddress).length
+    : 0;
+  const navItems = resolveCount > 0
+    ? [
+        ...NAV_ITEMS.slice(0, 3),
+        { id: "resolve", label: `Resolve ${resolveCount}`, href: "#/resolve" },
+        ...NAV_ITEMS.slice(3),
+      ]
+    : NAV_ITEMS;
+
   return (
     <nav
       className="anim-down"
@@ -93,18 +116,16 @@ export default function Navbar() {
         </button>
 
         <div className="nav-center" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <div
-            className="pill"
-            style={{
-              background: "var(--bg-card)",
-              border: "1px solid var(--border)",
-              color: "var(--text-2)",
-              fontSize: 9,
-            }}
-          >
-            <MarketIcon />
-            ARCIUM MPC
-          </div>
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => navigate(item.href)}
+              className={activePage === item.id ? "top-route-tab is-active" : "top-route-tab"}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
 
         <div className="nav-wallet">

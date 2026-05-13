@@ -2,6 +2,7 @@ import { Suspense, lazy, useMemo, useState } from "react";
 import { useMarkets } from "../../hooks/useMarkets";
 import { usePolymarketFeed } from "../../hooks/usePolymarketFeed";
 import MarketCard from "./MarketCard";
+import MarketActivityVisual from "../ui/MarketActivityVisual";
 
 const CreateMarketModal = lazy(() => import("./CreateMarketModal"));
 
@@ -87,6 +88,11 @@ function ImportablePolymarketCard({ market, index, onImport }) {
           {market.question}
         </p>
 
+        <MarketActivityVisual
+          seedKey={`${market.conditionId}:${market.endDate.getTime()}:${market.volume}`}
+          label="PUBLIC ACTIVITY"
+        />
+
         <div className="import-market-stats" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           <div style={{ background: "var(--bg-input)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 10px" }}>
             <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-3)", letterSpacing: "0.1em", marginBottom: 4 }}>
@@ -129,35 +135,17 @@ function ImportablePolymarketCard({ market, index, onImport }) {
 }
 
 const TAB_META = {
+  ALL: {
+    label: "ALL",
+    description: "Live VEIL markets, importable Polymarket opportunities, and resolved outcomes in one dense view.",
+    emptyTitle: "No markets yet",
+    emptyBody: "Create a market or import a live Polymarket market to populate the feed.",
+  },
   LIVE: {
     label: "LIVE",
-    description: "Markets that are still open for private betting.",
+    description: "Open VEIL markets plus live Polymarket markets that can be imported into VEIL.",
     emptyTitle: "No live markets right now",
-    emptyBody: "Create one or switch to Discover to import a fresh Polymarket market into VEIL.",
-  },
-  DISCOVER: {
-    label: "DISCOVER",
-    description: "Fresh Polymarket ideas that have not been imported into VEIL yet.",
-    emptyTitle: "Nothing new to import right now",
-    emptyBody: "You are caught up with the current Polymarket feed for this session.",
-  },
-  AWAITING: {
-    label: "AWAITING RESOLUTION",
-    description: "Markets that already ended and are waiting for settlement or the creator's resolution.",
-    emptyTitle: "No markets are waiting for resolution",
-    emptyBody: "Ended markets will move here automatically until they settle.",
-  },
-  HISTORY: {
-    label: "HISTORY",
-    description: "Settled markets stay on-chain and live here instead of crowding the active feed.",
-    emptyTitle: "No settled markets yet",
-    emptyBody: "Resolved markets will move into History automatically.",
-  },
-  HIDDEN: {
-    label: "HIDDEN",
-    description: "Markets hidden only in this browser. You can still open them and show them on your dashboard again.",
-    emptyTitle: "No hidden markets",
-    emptyBody: "Use “Hide from dashboard” inside a market when you want to tidy your personal view.",
+    emptyBody: "Create one or import a fresh Polymarket market into VEIL.",
   },
 };
 
@@ -166,12 +154,62 @@ function sortLiveMarkets(a, b) {
   return a.endTime.getTime() - b.endTime.getTime();
 }
 
-function sortAwaitingMarkets(a, b) {
-  return a.endTime.getTime() - b.endTime.getTime();
-}
-
 function sortHistoryMarkets(a, b) {
   return b.endTime.getTime() - a.endTime.getTime();
+}
+
+function matchesMarketQuery(market, query) {
+  if (!query) return true;
+  const text = [
+    market.question,
+    market.polymarketCategory,
+    market.isPolymarket ? "polymarket imported" : "custom native",
+    market.lifecycle,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return text.includes(query);
+}
+
+function matchesImportQuery(market, query) {
+  if (!query) return true;
+  return [market.question, market.category, "polymarket live import"]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+    .includes(query);
+}
+
+function sortMarketsByMode(markets, mode) {
+  const next = [...markets];
+  switch (mode) {
+    case "ending":
+      return next.sort((a, b) => a.endTime.getTime() - b.endTime.getTime());
+    case "activity":
+      return next.sort((a, b) => b.voteCount - a.voteCount);
+    case "created":
+    default:
+      return next.sort((a, b) => {
+        if (a.lifecycle !== b.lifecycle) {
+          const order = { live: 0, "awaiting-resolution": 1, history: 2 };
+          return (order[a.lifecycle] ?? 3) - (order[b.lifecycle] ?? 3);
+        }
+        return a.endTime.getTime() - b.endTime.getTime();
+      });
+  }
+}
+
+function sortImportableMarkets(markets, mode) {
+  const next = [...markets];
+  switch (mode) {
+    case "activity":
+      return next.sort((a, b) => Number(b.volume ?? 0) - Number(a.volume ?? 0));
+    case "ending":
+    case "created":
+    default:
+      return next.sort((a, b) => a.endDate.getTime() - b.endDate.getTime());
+  }
 }
 
 export default function MarketList() {
@@ -185,7 +223,9 @@ export default function MarketList() {
   const [createTab, setCreateTab] = useState("custom");
   const [selectedImportMarket, setSelectedImportMarket] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState("DISCOVER");
+  const [tab, setTab] = useState("ALL");
+  const [query, setQuery] = useState("");
+  const [sortMode, setSortMode] = useState("created");
   const [flashMessage, setFlashMessage] = useState("");
 
   const importedConditionIds = useMemo(
@@ -206,67 +246,56 @@ export default function MarketList() {
   const liveMarkets = useMemo(
     () =>
       markets
-        .filter((market) => !market.isHidden && market.lifecycle === "live")
+        .filter((market) => market.lifecycle === "live")
         .sort(sortLiveMarkets),
-    [markets]
-  );
-
-  const awaitingResolutionMarkets = useMemo(
-    () =>
-      markets
-        .filter((market) => !market.isHidden && market.lifecycle === "awaiting-resolution")
-        .sort(sortAwaitingMarkets),
     [markets]
   );
 
   const historyMarkets = useMemo(
     () =>
       markets
-        .filter((market) => !market.isHidden && market.lifecycle === "history")
+        .filter((market) => market.lifecycle === "history")
         .sort(sortHistoryMarkets),
     [markets]
   );
 
-  const hiddenMarkets = useMemo(
-    () => markets.filter((market) => market.isHidden).sort(sortHistoryMarkets),
-    [markets]
+  const allVisibleMarkets = useMemo(
+    () => [...liveMarkets, ...historyMarkets],
+    [historyMarkets, liveMarkets]
   );
 
   const tabConfig = useMemo(
     () => [
-      { id: "DISCOVER", count: importablePolymarkets.length },
-      { id: "LIVE", count: liveMarkets.length },
-      { id: "AWAITING", count: awaitingResolutionMarkets.length },
-      { id: "HISTORY", count: historyMarkets.length },
-      { id: "HIDDEN", count: hiddenMarkets.length },
+      { id: "ALL", count: allVisibleMarkets.length + importablePolymarkets.length },
+      { id: "LIVE", count: liveMarkets.length + importablePolymarkets.length },
     ],
-    [awaitingResolutionMarkets.length, hiddenMarkets.length, historyMarkets.length, importablePolymarkets.length, liveMarkets.length]
+    [allVisibleMarkets.length, importablePolymarkets.length, liveMarkets.length]
   );
 
-  const visibleMarkets = liveMarkets.length + awaitingResolutionMarkets.length + historyMarkets.length;
+  const visibleMarkets = allVisibleMarkets.length + importablePolymarkets.length;
   const activeMeta = TAB_META[tab];
 
   let displayedMarkets = [];
-  let showImportables = false;
 
   switch (tab) {
-    case "DISCOVER":
-      showImportables = true;
-      break;
-    case "AWAITING":
-      displayedMarkets = awaitingResolutionMarkets;
-      break;
-    case "HISTORY":
-      displayedMarkets = historyMarkets;
-      break;
-    case "HIDDEN":
-      displayedMarkets = hiddenMarkets;
+    case "ALL":
+      displayedMarkets = allVisibleMarkets;
       break;
     case "LIVE":
     default:
       displayedMarkets = liveMarkets;
       break;
   }
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredDisplayedMarkets = sortMarketsByMode(
+    displayedMarkets.filter((market) => matchesMarketQuery(market, normalizedQuery)),
+    sortMode
+  );
+  const filteredImportablePolymarkets = sortImportableMarkets(
+    importablePolymarkets.filter((market) => matchesImportQuery(market, normalizedQuery)),
+    sortMode
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -309,7 +338,7 @@ export default function MarketList() {
               Prediction Markets
             </h1>
             <p style={{ fontSize: 12, color: "var(--text-2)" }}>
-              Private Solana markets with automatic lifecycle buckets for live, awaiting resolution, and settled history.
+              Private Solana markets, live Polymarket imports, and public resolved outcomes without exposing encrypted signals.
             </p>
           </div>
 
@@ -347,9 +376,9 @@ export default function MarketList() {
           <div className="market-list-stats" style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
             {[
               { k: "Visible", v: visibleMarkets },
-              { k: "Live", v: liveMarkets.length },
-              { k: "Awaiting", v: awaitingResolutionMarkets.length },
-              { k: hiddenMarkets.length > 0 ? "Hidden" : "History", v: hiddenMarkets.length > 0 ? hiddenMarkets.length : historyMarkets.length },
+              { k: "Live", v: liveMarkets.length + importablePolymarkets.length },
+              { k: "Imported", v: markets.filter((market) => market.isPolymarket).length },
+              { k: "Resolved", v: historyMarkets.length },
             ].map(({ k, v }) => (
               <div
                 key={k}
@@ -398,7 +427,7 @@ export default function MarketList() {
             <span
               style={{
                 border: "1px solid var(--border)",
-                borderRadius: 999,
+                borderRadius: 4,
                 padding: "1px 7px",
                 fontSize: 10,
                 color: tab === id ? "var(--text)" : "var(--text-3)",
@@ -408,6 +437,35 @@ export default function MarketList() {
             </span>
           </button>
         ))}
+      </div>
+
+      <div
+        style={{
+          marginBottom: 18,
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) auto",
+          gap: 10,
+        }}
+        className="market-search-row"
+      >
+        <label className="market-search-box">
+          <span>Search markets...</span>
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search markets..."
+          />
+        </label>
+        <select
+          value={sortMode}
+          onChange={(event) => setSortMode(event.target.value)}
+          className="market-sort-select"
+          aria-label="Sort markets"
+        >
+          <option value="created">Sort: Created</option>
+          <option value="activity">Sort: Activity</option>
+          <option value="ending">Sort: Ending Soon</option>
+        </select>
       </div>
 
       <div
@@ -486,7 +544,7 @@ export default function MarketList() {
         </div>
       )}
 
-      {tab === "DISCOVER" && polymarketLoading && !loading && importablePolymarkets.length === 0 && (
+      {polymarketLoading && !loading && importablePolymarkets.length === 0 && (
         <div
           style={{
             marginBottom: 18,
@@ -502,7 +560,7 @@ export default function MarketList() {
         </div>
       )}
 
-      {!loading && !error && displayedMarkets.length === 0 && (!showImportables || importablePolymarkets.length === 0) && (
+      {!loading && !error && filteredDisplayedMarkets.length === 0 && filteredImportablePolymarkets.length === 0 && (
         <div className="anim-in" style={{ textAlign: "center", padding: "64px 24px" }}>
           <p style={{ fontFamily: "var(--font-sans)", fontSize: 16, color: "var(--text-2)", marginBottom: 8 }}>
             {activeMeta.emptyTitle}
@@ -511,24 +569,23 @@ export default function MarketList() {
         </div>
       )}
 
-      {!loading && !error && (displayedMarkets.length > 0 || (showImportables && importablePolymarkets.length > 0)) && (
+      {!loading && !error && (filteredDisplayedMarkets.length > 0 || filteredImportablePolymarkets.length > 0) && (
         <div className="market-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 12 }}>
-          {displayedMarkets.map((market, index) => (
+          {filteredDisplayedMarkets.map((market, index) => (
             <MarketCard key={market.publicKey} market={market} index={index} />
           ))}
-          {showImportables &&
-            importablePolymarkets.map((market, index) => (
-              <ImportablePolymarketCard
-                key={market.conditionId}
-                market={market}
-                index={displayedMarkets.length + index}
-                onImport={handleOpenPolymarketImport}
-              />
-            ))}
+          {filteredImportablePolymarkets.map((market, index) => (
+            <ImportablePolymarketCard
+              key={market.conditionId}
+              market={market}
+              index={filteredDisplayedMarkets.length + index}
+              onImport={handleOpenPolymarketImport}
+            />
+          ))}
         </div>
       )}
 
-      {tab === "DISCOVER" && polymarketError && (
+      {polymarketError && (
         <div
           style={{
             marginTop: 24,
@@ -554,8 +611,8 @@ export default function MarketList() {
               setShowCreate(false);
               setSelectedImportMarket(null);
               setCreateTab("custom");
+              setTab("LIVE");
               if (result?.source === "polymarket") {
-                setTab("LIVE");
                 setFlashMessage(`Imported into VEIL live markets: ${result.question}`);
                 window.setTimeout(() => setFlashMessage(""), 5000);
               }

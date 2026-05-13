@@ -2,10 +2,24 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { WalletReadyState } from "@solana/wallet-adapter-base";
 import { useWallet } from "../../hooks/useWallet";
 
+function WalletGlyph() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+      <path d="M2.2 3.7h8.2c.8 0 1.4.6 1.4 1.4v3.8c0 .8-.6 1.4-1.4 1.4H2.2c-.8 0-1.4-.6-1.4-1.4V5.1c0-.8.6-1.4 1.4-1.4Z" stroke="currentColor" strokeWidth="1.15" />
+      <path d="M3.2 3.7 7.9 1.5c.8-.4 1.7.2 1.7 1.1v1.1" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" />
+      <path d="M9.2 7h1.2" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function WalletButton() {
-  const { connected, connecting, disconnect, shortAddress, balance, wallets, select } = useWallet();
+  const { connected, connecting, disconnect, publicKey, balance, wallet, wallets, select } = useWallet();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const address = publicKey?.toBase58() || "";
+  const leading = address.slice(0, 4);
+  const trailing = address.slice(-4);
+  const walletName = wallet?.adapter?.name || "Wallet";
 
   const availableWallets = useMemo(() => {
     const seen = new Set();
@@ -73,32 +87,26 @@ export default function WalletButton() {
 
   if (connected) {
     return (
-      <div className="wallet-connected" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div className="wallet-connected wallet-web3-connected">
         {balance !== null && (
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text-2)" }}>
+          <span className="wallet-balance">
             {balance.toFixed(3)} SOL
           </span>
         )}
         <button
+          type="button"
+          title={`Disconnect ${address}`}
           onClick={() => disconnect()}
-          style={{ ...base, padding: "7px 13px", background: "#050505", color: "#ffffff" }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "rgba(255,255,255,0.16)";
-          }}
+          className="wallet-address-control"
+          style={{ ...base }}
         >
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: "var(--green)",
-              display: "inline-block",
-            }}
-          />
-          {shortAddress}
+          <span className="wallet-glyph"><WalletGlyph /></span>
+          <span className="wallet-address-text">
+            <span>{leading}</span>
+            <span className="wallet-address-separator">/</span>
+            <span>{trailing}</span>
+          </span>
+          <span className="wallet-name">{walletName}</span>
         </button>
       </div>
     );

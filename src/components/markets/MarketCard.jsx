@@ -1,14 +1,21 @@
+import { useEffect, useState } from "react";
 import { navigate } from "../../utils/navigation";
 import StatusBadge from "../ui/StatusBadge";
 import CountdownTimer from "../ui/CountdownTimer";
 import OracleTag from "../ui/OracleTag";
+import MarketActivityVisual from "../ui/MarketActivityVisual";
 
 export default function MarketCard({ market, index }) {
+  const [now, setNow] = useState(() => Date.now());
   const settled = market.status === 3;
-  const pastEnd = Date.now() >= market.endTime.getTime();
+  const pastEnd = now >= market.endTime.getTime();
   const open = market.status === 1 && !pastEnd;
   const awaitingResolution = !settled && (market.status === 2 || pastEnd);
-  const hidden = market.isHidden;
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), 30000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   return (
     <article
@@ -61,6 +68,11 @@ export default function MarketCard({ market, index }) {
           {market.question}
         </p>
 
+        <MarketActivityVisual
+          seedKey={`${market.publicKey}:${market.endTime.getTime()}:${market.status}`}
+          label={settled ? "RESOLVED ACTIVITY" : "ENCRYPTED ACTIVITY"}
+        />
+
         {/* Stat row */}
         <div className="market-card-stats" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           {[
@@ -82,20 +94,7 @@ export default function MarketCard({ market, index }) {
           <span style={{ fontSize: 11, color: "var(--text-3)" }}>
             {market.voteCount} {market.voteCount === 1 ? "bet" : "bets"}
           </span>
-          {hidden ? (
-            <span
-              className="pill"
-              style={{
-                background: "var(--bg-input)",
-                color: "var(--text-3)",
-                border: "1px solid var(--border)",
-                fontSize: 9,
-                fontWeight: 700,
-              }}
-            >
-              HIDDEN
-            </span>
-          ) : settled && market.resultPublished ? (
+          {settled && market.resultPublished ? (
             <span className="pill" style={{
               background: market.yesWins ? "var(--cyan-dim)" : "var(--red-dim)",
               color:      market.yesWins ? "var(--cyan)"    : "var(--red)",
