@@ -1,9 +1,6 @@
 const GAMMA_API =
   import.meta.env.VITE_POLYMARKET_API_BASE || "/api/polymarket";
-const DIRECT_GAMMA_API = "https://gamma-api.polymarket.com";
 const POLYMARKET_TIMEOUT_MS = Number(import.meta.env.VITE_POLYMARKET_TIMEOUT_MS || 4500);
-const DISABLE_DIRECT_FALLBACK =
-  import.meta.env.VITE_DISABLE_DIRECT_POLYMARKET_FALLBACK === "true";
 
 function joinUrl(base, path) {
   return `${base.replace(/\/$/, "")}${path}`;
@@ -28,13 +25,7 @@ async function fetchJson(base, path, timeoutMs = POLYMARKET_TIMEOUT_MS) {
 }
 
 async function fetchPolymarketJson(path) {
-  try {
-    return await fetchJson(GAMMA_API, path);
-  } catch (err) {
-    const alreadyDirect = GAMMA_API.includes("gamma-api.polymarket.com");
-    if (DISABLE_DIRECT_FALLBACK || alreadyDirect) throw err;
-    return fetchJson(DIRECT_GAMMA_API, path, 6500);
-  }
+  return fetchJson(GAMMA_API, path);
 }
 
 // Fetch active binary YES/NO markets from Polymarket
